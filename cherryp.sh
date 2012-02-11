@@ -1,5 +1,5 @@
 #!/bin/bash
-git rev-list --reverse b740d2de7ad75360898ec6769ed595b81340ad19^..010c2801a05eade6815303e368a6784930a51702 | while read rev  
+git rev-list --reverse f573aa38ae3e761413af3c01a1a58505f06790ff^..c019ca6097ebb272f0fe586df50a5639abc13704 | while read rev  
 do 
 git cherry-pick $rev || break
 done
