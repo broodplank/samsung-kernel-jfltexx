@@ -594,7 +594,19 @@ static int adreno_setup_pt(struct kgsl_device *device,
 	 */
 	device->mh.mpu_range = device->mmu.setstate_memory.gpuaddr +
 				device->mmu.setstate_memory.size;
+<<<<<<< HEAD
 >>>>>>> 9d7f71a... msm: kgsl: disable use of iommu TTBR1
+=======
+
+	if (adreno_is_a305(adreno_dev)) {
+		result = kgsl_mmu_map_global(pagetable,
+				&adreno_dev->on_resume_cmd);
+		if (result)
+			goto unmap_setstate_desc;
+		device->mh.mpu_range = device->mmu.setstate_memory.gpuaddr +
+				device->mmu.setstate_memory.size;
+	}
+>>>>>>> 515be8c... msm: kgsl: Submit a draw command on resume
 	return result;
 
 unmap_memstore_desc:
