@@ -1,4 +1,5 @@
 #include <linux/sched.h>
+#include <linux/sched/sysctl.h>
 #include <linux/mutex.h>
 #include <linux/spinlock.h>
 #include <linux/stop_machine.h>
