@@ -65,6 +65,12 @@ static inline s32 scm_call_atomic3(u32 svc, u32 cmd, u32 arg1, u32 arg2,
 	return 0;
 }
 
+static inline s32 scm_call_atomic3(u32 svc, u32 cmd, u32 arg1, u32 arg2,
+		u32 arg3)
+{
+	return 0;
+}
+
 static inline s32 scm_call_atomic4_3(u32 svc, u32 cmd, u32 arg1, u32 arg2,
 		u32 arg3, u32 arg4, u32 *ret1, u32 *ret2)
 {
