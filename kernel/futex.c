@@ -64,6 +64,7 @@
 #include <linux/hugetlb.h>
 #include <linux/freezer.h>
 #include <linux/bootmem.h>
+#include <linux/freezer.h>
 
 #include <asm/futex.h>
 
