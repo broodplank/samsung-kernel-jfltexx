@@ -371,8 +371,11 @@ void mdp4_dsi_video_wait4vsync(int cndx)
 	unsigned long flags;
 =======
 	int ret;
+<<<<<<< HEAD
 	ktime_t timestamp;
 >>>>>>> 1b835d2... msm: mdp: Use a waitqueue for vsync notifications
+=======
+>>>>>>> 8f4ed8e... msm: mdp: Wait unconditionally in internal vsync waits
 
 	if (cndx >= MAX_CONTROLLER) {
 		pr_err("%s: out or range: cndx=%d\n", __func__, cndx);
@@ -387,10 +390,7 @@ void mdp4_dsi_video_wait4vsync(int cndx)
 	
 	mdp4_video_vsync_irq_ctrl(cndx, 1);
 
-	timestamp = vctrl->vsync_time;
-	ret = wait_event_interruptible_timeout(vctrl->wait_queue,
-			!ktime_equal(timestamp, vctrl->vsync_time) &&
-			vctrl->vsync_irq_enabled,
+	ret = wait_event_interruptible_timeout(vctrl->wait_queue, 1,
 			msecs_to_jiffies(VSYNC_PERIOD * 8));
 
 <<<<<<< HEAD
