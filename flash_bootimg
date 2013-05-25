@@ -1,0 +1,74 @@
+#!/bin/bash
+cd ${PWD}
+if [[ -e build/output/boot.img ]]; then
+  echo "boot.img found, continuing"
+else
+  echo "boot.img not found, run build_bootimg first"
+  exit
+fi;
+echo
+echo "Flashing build/output/boot.img to phone"
+echo
+cd build
+echo "Pushing boot.img to sdcard..."
+echo
+echo "Waiting for device..."
+./adb 'wait-for-devices'
+echo "Device found... continuing"
+echo
+echo "Pushing boot.img to sdcard"
+./adb push output/boot.img /sdcard/boot.img
+echo
+echo "Flashing boot.img to mmcblk0p20..."
+./adb shell su -c 'dd if=/sdcard/boot.img of=/dev/block/mmcblk0p20'
+echo
+echo "Do you want to push the modules? ( y / n )"
+read modules
+if [ ${modules} == "y" ];
+then
+
+if [[ -d /tmp/modules ]]; then
+  rm -Rf /tmp/modules
+  mkdir /tmp/modules
+else
+  mkdir /tmp/modules
+fi;
+
+cd ..
+
+find . -name "*.ko" -exec cp {} /tmp/modules/ \;
+cp /tmp/modules/*.ko build/output/modules
+
+
+cd build
+
+echo "Mounting System as RW"
+./adb -d shell su -c 'mount -o remount rw /system'
+echo
+echo "Pushing modules to /system/lib/modules"
+adb -d shell rm -Rf /sdcard/modules
+adb -d shell mkdir /sdcard/modules
+find . -name "*.ko" -exec ./adb push {} /sdcard/modules \;
+echo 
+echo "Moving modules from /sdcard/modules to /system/lib/modules"
+adb -d shell su -c 'busybox mv -f /sdcard/modules/*.ko /system/lib/modules/'
+echo
+echo "Setting module permissions to RW-R-R (644)"
+./adb -d shell su -c 'chmod 644 /system/lib/modules/*.ko'
+rm -f modules/*.ko
+
+fi;
+
+echo
+echo "Do you want to wipe cache  ? ( y / n )"
+read wipecache
+if [ ${wipecache} == "y" ];
+then
+ echo
+ echo "Removing dalvik-cache.."
+ ./adb shell su -c 'rm -Rf /data/dalvik-cache'
+ echo
+fi;
+echo "Rebooting Phone..."
+./adb reboot
+cd ..
