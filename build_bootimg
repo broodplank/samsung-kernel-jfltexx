@@ -1,0 +1,189 @@
+#!/bin/bash
+
+if [[ -e arch/arm/boot/zImage ]]; then 
+   echo "zImage found"
+   clear
+else
+  echo "No zImage found in arch/arm/boot, exiting"
+   exit
+fi;
+
+ShowMenu () {
+clear
+echo "=== GT-i9505 boot.img Creator"
+echo "=== by broodplank1337"
+echo 
+echo "- Ramdisk Selection"
+echo
+echo "- Please choose the appropriate rom type for your kernel:"
+echo " "
+echo " [1] JB v4.2.x - TouchWiz (All Stock-based ROMS)"
+echo " [2] JB v4.2.x - CM 10.1"
+echo " [3] JB v4.2.x - AOSP (Google Edition)"
+echo " [4] JB v4.3.x - AOSP (Google Edition)"
+echo " "
+echo " [x] Exit"
+echo " "
+}
+
+while [ 1 ]
+do
+ShowMenu
+read CHOICE
+case "$CHOICE" in
+
+"1")
+echo " "
+echo "Building boot.img for TouchWiz 4.2.x"
+echo " "
+
+echo "Cleaning possible previous remains"
+rm -f build/4.2.x/zImage
+rm -f build/4.2.x/ramdisk.gz
+
+echo "Copying zImage and modules"
+cp arch/arm/boot/zImage build/4.2.x/zImage
+
+cd build/4.2.x
+
+echo "Packing ramdisk"
+../mkbootfs ./boot.img-ramdisk-tw | gzip > ramdisk.gz
+echo "Packing boot.img"
+../mkbootimg --kernel zImage --ramdisk ramdisk.gz --cmdline "console=null androidboot.hardware=qcom user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3" -o boot.img --base "0x80200000" --ramdiskaddr "0x82200000"
+
+echo "Cleaning left overs"
+rm -f zImage
+rm -f ramdisk.gz
+
+echo "Moving boot.img to build/output/boot.img"
+mv -f boot.img ../output/boot.img
+
+cd ..
+
+echo " "
+echo " "
+echo " "
+echo "boot.img created for TouchWiz JB 4.2.x"
+exit
+;;
+
+
+"2")
+echo " "
+echo "Building boot.img for CyanogenMod 10.1 4.2.x"
+echo " "
+
+echo "Cleaning possible previous remains"
+rm -f build/4.2.x/zImage
+rm -f build/4.2.x/ramdisk.gz
+
+echo "Copying zImage and modules"
+cp arch/arm/boot/zImage build/4.2.x/zImage
+
+cd build/4.2.x
+
+echo "Packing ramdisk"
+../mkbootfs ./boot.img-ramdisk-cm | gzip > ramdisk.gz
+echo "Packing boot.img"
+../mkbootimg --kernel zImage --ramdisk ramdisk.gz --cmdline "console=null androidboot.hardware=qcom user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3" -o boot.img --base "0x80200000" --ramdiskaddr "0x82200000"
+
+echo "Cleaning left overs"
+rm -f zImage
+rm -f ramdisk.gz
+
+echo "Moving boot.img to build/output/boot.img"
+mv -f boot.img ../output/boot.img
+
+cd ..
+
+echo " "
+echo " "
+echo " "
+echo "boot.img created for CyanogenMod 10.1 JB 4.2.x"
+exit
+;;
+
+
+"3")
+echo " "
+echo "Building boot.img for AOSP 4.2.x Google Edition"
+echo " "
+
+echo "Cleaning possible previous remains"
+rm -f build/4.2.x/zImage
+rm -f build/4.2.x/ramdisk.gz
+
+echo "Copying zImage and modules"
+cp arch/arm/boot/zImage build/4.2.x/zImage
+
+cd build/4.2.x
+
+echo "Packing ramdisk"
+../mkbootfs ./boot.img-ramdisk-aosp | gzip > ramdisk.gz
+echo "Packing boot.img"
+../mkbootimg --kernel zImage --ramdisk ramdisk.gz --cmdline "console=null androidboot.hardware=qcom user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3" -o boot.img --base "0x80200000" --ramdiskaddr "0x82200000"
+
+echo "Cleaning left overs"
+rm -f zImage
+rm -f ramdisk.gz
+
+echo "Moving boot.img to build/output/boot.img"
+mv -f boot.img ../output/boot.img
+
+cd ..
+
+echo " "
+echo " "
+echo " "
+echo "boot.img created for AOSP JB 4.2.x"
+exit
+;;
+
+"4")
+echo " "
+echo "Building boot.img for AOSP 4.3.x Google Edition"
+echo " "
+
+echo "Cleaning possible previous remains"
+rm -f build/4.3.x/zImage
+rm -f build/4.3.x/ramdisk.gz
+
+echo "Copying zImage and modules"
+cp arch/arm/boot/zImage build/4.3.x/zImage
+
+cd build/4.3.x
+
+echo "Packing ramdisk"
+../mkbootfs ./boot.img-ramdisk-aosp | gzip > ramdisk.gz
+echo "Packing boot.img"
+../mkbootimg --kernel zImage --ramdisk ramdisk.gz --cmdline "console=null androidboot.hardware=qcom user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3" -o boot.img --base "0x80200000" --ramdiskaddr "0x82200000"
+
+echo "Cleaning left overs"
+rm -f zImage
+rm -f ramdisk.gz
+
+echo "Moving boot.img to build/output/boot.img"
+mv -f boot.img ../output/boot.img
+
+cd ..
+
+echo " "
+echo " "
+echo " "
+echo "boot.img created for AOSP JB 4.3.x"
+exit
+;;
+
+
+"x")
+exit
+;;
+
+
+esac
+
+done
+exit
+
+
+
