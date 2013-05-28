@@ -113,6 +113,13 @@ struct adreno_device {
 	unsigned int gpulist_index;
 	struct ocmem_buf *ocmem_hdl;
 	unsigned int ocmem_base;
+<<<<<<< HEAD
+=======
+	unsigned int gpu_cycles;
+	struct kgsl_memdesc on_resume_cmd;
+	unsigned int on_resume_ib[3];
+	bool on_resume_issueib;
+>>>>>>> 6cf3828... msm: kgsl: Convert the Adreno GPU cycle counters to run free
 };
 
 struct adreno_gpudev {
