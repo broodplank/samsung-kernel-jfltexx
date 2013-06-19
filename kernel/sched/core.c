@@ -761,6 +761,7 @@ static void enqueue_task(struct rq *rq, struct task_struct *p, int flags)
 	trace_sched_enq_deq_task(p, 1);
 #endif
 	inc_cumulative_runnable_avg(rq, p);
+	trace_sched_enq_deq_task(p, 1);
 }
 
 static void dequeue_task(struct rq *rq, struct task_struct *p, int flags)
@@ -772,6 +773,7 @@ static void dequeue_task(struct rq *rq, struct task_struct *p, int flags)
 	trace_sched_enq_deq_task(p, 0);
 #endif
 	dec_cumulative_runnable_avg(rq, p);
+	trace_sched_enq_deq_task(p, 0);
 }
 
 void activate_task(struct rq *rq, struct task_struct *p, int flags)
