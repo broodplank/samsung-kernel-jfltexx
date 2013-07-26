@@ -745,7 +745,6 @@ void kgsl_late_resume_driver(struct early_suspend *h)
 	}
 
 	mutex_unlock(&device->mutex);
-	kgsl_check_idle(device);
 	KGSL_PWR_ERR(device, "late resume end\n");
 }
 EXPORT_SYMBOL(kgsl_late_resume_driver);
@@ -1089,6 +1088,7 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 =======
 >>>>>>> 72cbcc3... Revert "msm: kgsl: Don't hold process list global mutex in process private create"
 
+<<<<<<< HEAD
 	/* Get file (per process) private struct */
 	dev_priv->process_priv = kgsl_get_process_private(dev_priv);
 	if (dev_priv->process_priv ==  NULL) {
@@ -1101,6 +1101,8 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 >>>>>>> 9d7f71a... msm: kgsl: disable use of iommu TTBR1
 =======
 >>>>>>> 72cbcc3... Revert "msm: kgsl: Don't hold process list global mutex in process private create"
+=======
+>>>>>>> d116618... gpu: msm: Cleanup after merge
 	mutex_lock(&device->mutex);
 
 	if (device->open_count == 0) {

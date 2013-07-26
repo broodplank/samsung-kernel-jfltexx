@@ -578,6 +578,7 @@ static int adreno_setup_pt(struct kgsl_device *device,
 		goto unmap_memstore_desc;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 =======
 	if (adreno_is_a305(adreno_dev)) {
 		result = kgsl_mmu_map_global(pagetable,
@@ -587,6 +588,8 @@ static int adreno_setup_pt(struct kgsl_device *device,
 			goto unmap_setstate_desc;
 	}
 
+=======
+>>>>>>> d116618... gpu: msm: Cleanup after merge
 	/*
 	 * Set the mpu end to the last "normal" global memory we use.
 	 * For the IOMMU, this will be used to restrict access to the
@@ -2696,7 +2699,7 @@ static int adreno_ringbuffer_drain(struct kgsl_device *device,
 	struct adreno_device *adreno_dev = ADRENO_DEVICE(device);
 	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffer;
 	unsigned long wait;
-	unsigned long timeout = jiffies + msecs_to_jiffies(ADRENO_IDLE_TIMEOUT);
+	unsigned long timeout = jiffies + ADRENO_IDLE_TIMEOUT;
 
 	/*
 	 * The first time into the loop, wait for 100 msecs and kick wptr again
