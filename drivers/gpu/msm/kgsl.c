@@ -583,6 +583,7 @@ kgsl_put_process_private(struct kgsl_device *device,
 {
 	struct kgsl_mem_entry *entry = NULL;
 	struct rb_node *node;
+<<<<<<< HEAD
 
 	if (!private)
 		return;
@@ -602,6 +603,33 @@ kgsl_put_process_private(struct kgsl_device *device,
 		node = rb_next(&entry->node);
 
 		rb_erase(&entry->node, &private->mem_rb);
+=======
+
+	if (!private)
+		return;
+
+	mutex_lock(&kgsl_driver.process_mutex);
+
+	if (--private->refcnt)
+		goto unlock;
+
+	kgsl_process_uninit_sysfs(private);
+	debugfs_remove_recursive(private->debug_root);
+
+	list_del(&private->list);
+
+	while (1) {
+		spin_lock(&private->mem_lock);
+		node = rb_first(&private->mem_rb);
+		if (!node) {
+			spin_unlock(&private->mem_lock);
+			break;
+		}
+		entry = rb_entry(node, struct kgsl_mem_entry, node);
+
+		rb_erase(&entry->node, &private->mem_rb);
+		spin_unlock(&private->mem_lock);
+>>>>>>> 72cbcc3... Revert "msm: kgsl: Don't hold process list global mutex in process private create"
 		kgsl_mem_entry_detach_process(entry);
 	}
 	kgsl_mmu_putpagetable(private->pagetable);
@@ -692,6 +720,9 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 	dev_priv->device = device;
 	filep->private_data = dev_priv;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 72cbcc3... Revert "msm: kgsl: Don't hold process list global mutex in process private create"
 
 	/* Get file (per process) private struct */
 	dev_priv->process_priv = kgsl_get_process_private(dev_priv);
@@ -700,8 +731,11 @@ static int kgsl_open(struct inode *inodep, struct file *filep)
 		goto err_freedevpriv;
 	}
 
+<<<<<<< HEAD
 =======
 >>>>>>> 9d7f71a... msm: kgsl: disable use of iommu TTBR1
+=======
+>>>>>>> 72cbcc3... Revert "msm: kgsl: Don't hold process list global mutex in process private create"
 	mutex_lock(&device->mutex);
 	kgsl_check_suspended(device);
 
