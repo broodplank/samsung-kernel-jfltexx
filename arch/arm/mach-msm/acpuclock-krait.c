@@ -42,6 +42,8 @@
 #ifdef CONFIG_SEC_DEBUG_DCVS_LOG
 #include <mach/sec_debug.h>
 #endif
+#include "krait-defines.h"
+
 /* MUX source selects. */
 #define PRI_SRC_SEL_SEC_SRC	0
 #define PRI_SRC_SEL_HFPLL	1
@@ -486,11 +488,6 @@ out:
 	mutex_unlock(&l2_regulator_lock);
 }
 
-static int minus_vc;
-module_param_named(
-	mclk, minus_vc, int, S_IRUGO | S_IWUSR | S_IWGRP
-);
-
 /* Set the CPU's clock rate and adjust the L2 rate, voltage and BW requests. */
 static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 				  enum setrate_reason reason)
@@ -530,7 +527,7 @@ static int acpuclk_krait_set_rate(int cpu, unsigned long rate,
 	/* Calculate voltage requirements for the current CPU. */
 	vdd_data.vdd_mem  = calculate_vdd_mem(tgt);
 	vdd_data.vdd_dig  = calculate_vdd_dig(tgt);
-	vdd_data.vdd_core = calculate_vdd_core(tgt) + minus_vc;
+	vdd_data.vdd_core = calculate_vdd_core(tgt);
 	vdd_data.ua_core = tgt->ua_core;
 
 	/* Disable AVS before voltage switch */
@@ -645,9 +642,8 @@ static void __cpuinit hfpll_init(struct scalable *sc,
 		writel_relaxed(drv.hfpll_data->droop_val,
 			       sc->hfpll_base + drv.hfpll_data->droop_offset);
 
-	/* Set an initial rate and enable the PLL. */
+	/* Set an initial PLL rate. */
 	hfpll_set_rate(sc, tgt_s);
-	hfpll_enable(sc, false);
 }
 
 static int __cpuinit rpm_regulator_init(struct scalable *sc, enum vregs vreg,
@@ -818,7 +814,9 @@ static int __cpuinit init_clock_sources(struct scalable *sc,
 	regval &= ~(0x3 << 6);
 	set_l2_indirect_reg(sc->l2cpmr_iaddr, regval);
 
-	/* Switch to the target clock source. */
+	/* Enable and switch to the target clock source. */
+	if (tgt_s->src == HFPLL)
+		hfpll_enable(sc, false);
 	set_pri_clk_src(sc, tgt_s->pri_src_sel);
 	sc->cur_speed = tgt_s;
 
@@ -941,8 +939,56 @@ static void __init bus_init(const struct l2_level *l2_level)
 		dev_err(drv.dev, "initial bandwidth req failed (%d)\n", ret);
 }
 
+#ifdef CONFIG_CPU_VOLTAGE_TABLE
+
+#define HFPLL_MIN_VDD		 600000
+#define HFPLL_MAX_VDD		1450000
+
+ssize_t acpuclk_get_vdd_levels_str(char *buf) {
+
+	int i, len = 0;
+
+	if (buf) {
+		mutex_lock(&driver_lock);
+
+		for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
+			/* updated to use uv required by 8x60 architecture - faux123 */
+			len += sprintf(buf + len, "%8lu: %8d\n", drv.acpu_freq_tbl[i].speed.khz,
+				drv.acpu_freq_tbl[i].vdd_core );
+		}
+
+		mutex_unlock(&driver_lock);
+	}
+	return len;
+}
+
+/* updated to use uv required by 8x60 architecture - faux123 */
+void acpuclk_set_vdd(unsigned int khz, int vdd_uv) {
+
+	int i;
+	unsigned int new_vdd_uv;
+
+	mutex_lock(&driver_lock);
+
+	for (i = 0; drv.acpu_freq_tbl[i].speed.khz; i++) {
+		if (khz == 0)
+			new_vdd_uv = min(max((unsigned int)(drv.acpu_freq_tbl[i].vdd_core + vdd_uv),
+				(unsigned int)HFPLL_MIN_VDD), (unsigned int)HFPLL_MAX_VDD);
+		else if ( drv.acpu_freq_tbl[i].speed.khz == khz)
+			new_vdd_uv = min(max((unsigned int)vdd_uv,
+				(unsigned int)HFPLL_MIN_VDD), (unsigned int)HFPLL_MAX_VDD);
+		else 
+			continue;
+
+		drv.acpu_freq_tbl[i].vdd_core = new_vdd_uv;
+	}
+	pr_warn("faux123: user voltage table modified!\n");
+	mutex_unlock(&driver_lock);
+}
+#endif	/* CONFIG_CPU_VOTALGE_TABLE */
+
 #ifdef CONFIG_CPU_FREQ_MSM
-static struct cpufreq_frequency_table freq_table[NR_CPUS][35];
+static struct cpufreq_frequency_table freq_table[NR_CPUS][FREQ_TABLE_SIZE];
 extern int console_batt_stat;
 static void __init cpufreq_table_init(void)
 {
@@ -954,10 +1000,10 @@ static void __init cpufreq_table_init(void)
 		for (i = 0; drv.acpu_freq_tbl[i].speed.khz != 0
 				&& freq_cnt < ARRAY_SIZE(*freq_table); i++) {
 			if (drv.acpu_freq_tbl[i].use_for_scaling) {
-#ifdef CONFIG_SEC_FACTORY 
+#if 0
 				// if factory_condition, set the core freq limit.
 				//QMCK
-				if (console_set_on_cmdline && drv.acpu_freq_tbl[i].speed.khz > 1000000) {
+				if (console_set_on_cmdline && drv.acpu_freq_tbl[i].speed.khz > 1242000) {
 					if(console_batt_stat == 1) {
 						continue;
 					}
