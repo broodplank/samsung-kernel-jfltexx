@@ -2681,6 +2681,9 @@ CONFIG_HID=y
 CONFIG_HIDRAW=y
 CONFIG_UHID=y
 
+#Cifs 4.2.x multiuser fix
+CONFIG_RESTRICT_ROOTFS_SLAVE=y
+
 #
 # USB Input Devices
 #
