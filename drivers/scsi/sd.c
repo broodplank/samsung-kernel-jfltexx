@@ -2745,6 +2745,7 @@ static void sd_probe_async(void *data, async_cookie_t cookie)
 	msleep(500);
 #endif
 
+	blk_pm_runtime_init(sdp->request_queue, dev);
 	add_disk(gd);
 #ifdef CONFIG_USB_STORAGE_DETECT
 	sdkp->prv_media_present = sdkp->media_present;
