@@ -27,40 +27,6 @@
 #define KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 #endif /* KERNEL_VERSION */
 
-/* 3.0.43 is the highest version currently supported */
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,0,43) && \
-  LINUX_VERSION_CODE < KERNEL_VERSION(3,1,0)
-#error "Kernel versions after 3.0.43 are not supported"
-#endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,0,43) */
-
-/* 3.1.10 is the highest 3.1 version currently supported */
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,1,10) && \
-  LINUX_VERSION_CODE < KERNEL_VERSION(3,2,0)
-#warning "Kernel versions after 3.1.10 are not supported"
-#endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,1,10) && ... */
-
-/* 3.2.30 is the highest 3.2 version currently supported */
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,2,30) && \
-  LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
-#warning "Kernel versions after 3.2.30 are not supported"
-#endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,2,30) && ... */
-
-/* 3.3.8 is the highest 3.3 version currently supported */
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,3,8) && \
-  LINUX_VERSION_CODE < KERNEL_VERSION(3,4,0)
-#warning "Kernel versions after 3.3.8 are not supported"
-#endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,3,8) && ... */
-
-/* 3.4.11 is the highest 3.4 version currently supported */
-#if LINUX_VERSION_CODE > KERNEL_VERSION(3,4,60) && \
-  LINUX_VERSION_CODE < KERNEL_VERSION(3,5,0)
-#warning "Kernel versions after 3.4.11 are not supported"
-#endif /* LINUX_VERSION_CODE > KERNEL_VERSION(3,4,11) && ... */
-
-/* 2.4 is not supported */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-#error "Kernel versions pre 2.6.0 are not supported"
-#endif /* LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0) */
 
 /* 2.6 series specific things */
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,0)
