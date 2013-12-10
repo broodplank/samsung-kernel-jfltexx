@@ -6,6 +6,8 @@ obj-y += timer.o
 endif
 obj-y += clock.o clock-voter.o clock-dummy.o
 obj-y += modem_notifier.o subsystem_map.o
+obj-$(CONFIG_INTELLI_PLUG) += intelli_plug.o
+obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
 obj-$(CONFIG_DEBUG_FS) += nohlt.o clock-debug.o
 obj-$(CONFIG_KEXEC) += msm_kexec.o
 

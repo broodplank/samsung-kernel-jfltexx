@@ -39,6 +39,7 @@
 #include <linux/notifier.h>
 #include <linux/memory.h>
 #include <linux/memory_hotplug.h>
+#include <linux/earlysuspend.h>
 
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 #include <linux/fs.h>
@@ -89,7 +90,7 @@ extern atomic_t kswapd_thread_on;
 static unsigned long prev_jiffy;
 int hidden_cgroup_counter = 0;
 static uint32_t minimum_freeswap_pages = MIN_FREESWAP_PAGES;
-static uint32_t minimun_reclaim_pages = MIN_RECLAIM_PAGES;
+static uint32_t minimum_reclaim_pages = MIN_RECLAIM_PAGES;
 static uint32_t minimum_interval_time = MIN_CSWAP_INTERVAL;
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
 
@@ -104,20 +105,41 @@ static uint32_t minimum_interval_time = MIN_CSWAP_INTERVAL;
 static uint32_t lmk_count = 0;
 #endif
 static uint32_t lowmem_debug_level = 1;
+static uint32_t lowmem_auto_oom = 1;
 static int lowmem_adj[6] = {
 	0,
-	1,
-	6,
+	2,
+	4,
+	9,
 	12,
+	15,
 };
-static int lowmem_adj_size = 4;
+static int lowmem_adj_size = 6;
 static int lowmem_minfree[6] = {
 	3 * 512,	/* 6MB */
 	2 * 1024,	/* 8MB */
 	4 * 1024,	/* 16MB */
+	12 * 1024,	/* 49MB */
 	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 128MB */
 };
-static int lowmem_minfree_size = 4;
+static int lowmem_minfree_screen_off[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	12 * 1024,	/* 49MB */
+	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 128MB */
+};
+static int lowmem_minfree_screen_on[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	12 * 1024,	/* 49MB */
+	16 * 1024,	/* 64MB */
+	20 * 1024,	/* 128MB */
+};
+static int lowmem_minfree_size = 6;
 
 static unsigned long lowmem_deathpending_timeout;
 
@@ -342,6 +364,24 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	return rem;
 }
 
+static void low_mem_early_suspend(struct early_suspend *handler)
+{
+	if (lowmem_auto_oom) {
+		memcpy(lowmem_minfree_screen_on, lowmem_minfree, sizeof(lowmem_minfree));
+		memcpy(lowmem_minfree, lowmem_minfree_screen_off, sizeof(lowmem_minfree_screen_off));
+	}
+}
+
+static void low_mem_late_resume(struct early_suspend *handler)
+{
+	if (lowmem_auto_oom)
+		memcpy(lowmem_minfree, lowmem_minfree_screen_on, sizeof(lowmem_minfree_screen_on));
+}
+
+static struct early_suspend low_mem_suspend = {
+	.suspend = low_mem_early_suspend,
+	.resume = low_mem_late_resume,
+};
 
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 void could_cswap(void)
@@ -459,7 +499,7 @@ static int do_compcache(void * nothing)
 		if (kthread_should_stop())
 			break;
 
-		if (soft_reclaim() < minimun_reclaim_pages)
+		if (soft_reclaim() < minimum_reclaim_pages)
 			cancel_soft_reclaim();
 
 		atomic_set(&s_reclaim.kcompcached_running, 0);
@@ -509,6 +549,7 @@ static struct shrinker lowmem_shrinker = {
 
 static int __init lowmem_init(void)
 {
+	register_early_suspend(&low_mem_suspend);
 	register_shrinker(&lowmem_shrinker);
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 	kcompcache_class = class_create(THIS_MODULE, "kcompcache");
@@ -647,6 +688,8 @@ module_param_array_named(adj, lowmem_adj, int, &lowmem_adj_size,
 #endif
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
+module_param_array_named(minfree_screen_off, lowmem_minfree_screen_off, uint, &lowmem_minfree_size,
+			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
 #ifdef LMK_COUNT_READ
 module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
@@ -654,7 +697,7 @@ module_param_named(lmkcount, lmk_count, uint, S_IRUGO);
 
 #ifdef CONFIG_ZRAM_FOR_ANDROID
 module_param_named(min_freeswap, minimum_freeswap_pages, uint, S_IRUSR | S_IWUSR);
-module_param_named(min_reclaim, minimun_reclaim_pages, uint, S_IRUSR | S_IWUSR);
+module_param_named(min_reclaim, minimum_reclaim_pages, uint, S_IRUSR | S_IWUSR);
 module_param_named(min_interval, minimum_interval_time, uint, S_IRUSR | S_IWUSR);
 #endif /* CONFIG_ZRAM_FOR_ANDROID */
 
