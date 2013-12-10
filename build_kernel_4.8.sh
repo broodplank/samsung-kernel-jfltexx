@@ -75,7 +75,7 @@ fi;
 . $KERNELDIR/.config;
 
 # get version from config
-GETVER=`grep 'Alucard-*-V' .config |sed 's/Alucard-//g' | sed 's/.*".//g' | sed 's/-G.*//g'`;
+GETVER=`grep 'Alucard-*-V' .config |sed 's/Alucard-//g' | sed 's/.*".//g' | sed 's/-A.*//g'`;
 
 echo "Remove old zImage"
 # remove previous zImage files
@@ -128,7 +128,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	 rm $i;
 	done;
 
-	FILENAME=Kernel-Alucard-${GETVER}-`date +"[%H-%M]-[%d-%m]-GE-EUR-KK4.4-SGIV-PWR-CORE"`.zip
+	FILENAME=Kernel-Alucard-${GETVER}-`date +"[%H-%M]-[%d-%m]-AOSP-EUR-KK4.4-SGIV-PWR-CORE"`.zip
 	zip -r $FILENAME .;
 
 	time_end=$(date +%s.%N)
