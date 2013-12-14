@@ -356,7 +356,7 @@ static ssize_t store_cpus_boost(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 
-	input = (input > 0);
+	input = max(min(input, 2), 0);
 
 	if (input == atomic_read(&alucard_tuners_ins.cpus_boost))
 		return count;
@@ -414,8 +414,9 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 #endif
 	unsigned int next_freq = 0;
 	int cur_load = -1;
+	int avg_load = 0;
 	unsigned int cpu;
-	int j;
+	int j, online = 0;
 	bool cpus_boost = atomic_read(&alucard_tuners_ins.cpus_boost) > 0;
 	
 	cpu = this_alucard_cpuinfo->cpu;
@@ -438,7 +439,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",cpu, wall_time, idle_time);*/
 	if (wall_time >= idle_time) { /*if wall_time < idle_time, evaluate cpu load next time*/
 		this_alucard_cpuinfo->cpu_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 1;/*if wall_time is equal to idle_time cpu_load is equal to 1*/
-		if (cpus_boost) {
+		if (cpus_boost == 2) {
 			for_each_online_cpu(j) {
 				struct cpufreq_alucard_cpuinfo *j_alucard_cpuinfo;
 				j_alucard_cpuinfo = &per_cpu(od_alucard_cpuinfo, j);
@@ -447,6 +448,15 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 					cur_load = j_alucard_cpuinfo->cpu_load;
 				}
 			}
+		} else if (cpus_boost == 1) {
+			for_each_online_cpu(j) {
+				struct cpufreq_alucard_cpuinfo *j_alucard_cpuinfo;
+				j_alucard_cpuinfo = &per_cpu(od_alucard_cpuinfo, j);
+				/* Get average cpuload*/
+				avg_load += j_alucard_cpuinfo->cpu_load;
+				online++;
+			}
+			cur_load = (avg_load / online);
 		} else {
 			cur_load = this_alucard_cpuinfo->cpu_load;
 		}
