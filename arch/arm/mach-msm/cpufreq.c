@@ -528,9 +528,7 @@ static int msm_cpufreq_suspend(struct cpufreq_policy *policy)
 	int cpu;
 
 	for_each_possible_cpu(cpu) {
-		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 1;
-		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 	}
 
 	return 0;
@@ -541,9 +539,7 @@ static int msm_cpufreq_resume(struct cpufreq_policy *policy)
 	int cpu;
 
 	for_each_possible_cpu(cpu) {
-		mutex_lock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 		per_cpu(cpufreq_suspend, cpu).device_suspended = 0;
-		mutex_unlock(&per_cpu(cpufreq_suspend, cpu).suspend_mutex);
 	}
 
 	return 0;
