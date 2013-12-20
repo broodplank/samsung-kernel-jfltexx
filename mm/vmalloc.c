@@ -272,6 +272,47 @@ static unsigned long cached_align;
 
 static unsigned long vmap_area_pcpu_hole;
 
+#ifdef CONFIG_ENABLE_VMALLOC_SAVING
+#define POSSIBLE_VMALLOC_START	PAGE_OFFSET
+
+#define VMALLOC_BITMAP_SIZE	((VMALLOC_END - PAGE_OFFSET) >> \
+					PAGE_SHIFT)
+#define VMALLOC_TO_BIT(addr)	((addr - PAGE_OFFSET) >> PAGE_SHIFT)
+#define BIT_TO_VMALLOC(i)	(PAGE_OFFSET + i * PAGE_SIZE)
+
+DECLARE_BITMAP(possible_areas, VMALLOC_BITMAP_SIZE);
+
+void mark_vmalloc_reserved_area(void *x, unsigned long size)
+{
+	unsigned long addr = (unsigned long)x;
+
+	bitmap_set(possible_areas, VMALLOC_TO_BIT(addr), size >> PAGE_SHIFT);
+}
+
+int is_vmalloc_addr(const void *x)
+{
+	unsigned long addr = (unsigned long)x;
+
+	if (addr < POSSIBLE_VMALLOC_START || addr >= VMALLOC_END)
+		return 0;
+
+	if (test_bit(VMALLOC_TO_BIT(addr), possible_areas))
+		return 0;
+
+	return 1;
+}
+#else
+int is_vmalloc_addr(const void *x)
+{
+	unsigned long addr = (unsigned long)x;
+
+	return addr >= VMALLOC_START && addr < VMALLOC_END;
+}
+#endif
+EXPORT_SYMBOL(is_vmalloc_addr);
+
+
+
 static struct vmap_area *__find_vmap_area(unsigned long addr)
 {
 	struct rb_node *n = vmap_area_root.rb_node;
