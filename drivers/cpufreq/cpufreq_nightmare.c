@@ -696,7 +696,7 @@ static void nightmare_check_cpu(struct cpufreq_nightmare_cpuinfo *this_nightmare
 	freq_up_brake = atomic_read(&nightmare_tuners_ins.freq_up_brake);
 	freq_step_dec = atomic_read(&nightmare_tuners_ins.freq_step_dec);
 
-	if (!cpu_policy)
+	if (!cpu_policy || cpu_policy == NULL)
 		return;
 
 	/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",cpu, wall_time, idle_time);*/

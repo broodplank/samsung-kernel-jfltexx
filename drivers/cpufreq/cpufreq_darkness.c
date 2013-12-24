@@ -447,7 +447,7 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 	force_freq_steps = atomic_read(&darkness_tuners_ins.force_freqs_step);
 #endif
 
-	if (!cpu_policy)
+	if (!cpu_policy || cpu_policy == NULL)
 		return;
 
 	/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",cpu, wall_time, idle_time);*/

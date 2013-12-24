@@ -38,6 +38,7 @@ struct hotplug_cpuinfo {
 	cputime64_t prev_cpu_idle;
 	int online;
 	int up_cpu;
+	int up_by_cpu;
 };
 
 static DEFINE_PER_CPU(struct hotplug_cpuinfo, od_hotplug_cpuinfo);
@@ -341,6 +342,7 @@ static void __ref cpus_hotplugging(bool state) {
 			per_cpu(od_hotplug_cpuinfo, cpu).prev_cpu_idle += get_cpu_iowait_time_us(cpu, &per_cpu(od_hotplug_cpuinfo, cpu).prev_cpu_wall);
 			per_cpu(od_hotplug_cpuinfo, cpu).up_cpu = 1;
 			per_cpu(od_hotplug_cpuinfo, cpu).online = cpu_online(cpu);
+			per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu = -1;
 		}
 		hotplugging_rate = 0;
 		delay = usecs_to_jiffies(atomic_read(&hotplug_tuners_ins.hotplug_sampling_rate));
@@ -620,6 +622,8 @@ static void hotplug_work_fn(struct work_struct *work)
 	int schedule_up_cpu = 1;
 	unsigned int cpu = 0;
 	unsigned int rq_avg = 0;
+	int up_by_cpu = -1;
+	int up_cpu_req = -1;
 	int delay;
 
 	mutex_lock(&timer_mutex);
@@ -668,6 +672,11 @@ static void hotplug_work_fn(struct work_struct *work)
 				other_hotplugging = true;
 			} else if (!online) {
 				per_cpu(od_hotplug_cpuinfo, cpu).up_cpu = 1;
+				up_by_cpu = per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu;
+				if (up_by_cpu >= 0) {
+					per_cpu(od_hotplug_cpuinfo, up_by_cpu).up_cpu = 1;
+					per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu = -1;
+				}
 			}
 			if (other_hotplugging == false) {
 				/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",j, wall_time, idle_time);*/
@@ -695,6 +704,7 @@ static void hotplug_work_fn(struct work_struct *work)
 							&& rq_avg > up_rq) {
 							schedule_up_cpu--;
 							per_cpu(od_hotplug_cpuinfo, cpu).up_cpu = 0;
+							up_cpu_req = cpu;
 						}
 				}
 				if (check_down
@@ -713,6 +723,7 @@ static void hotplug_work_fn(struct work_struct *work)
 				}
 				if (schedule_up_cpu == 0 && !online) {
 					per_cpu(od_hotplug_cpuinfo, cpu).online = true;
+					per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu = up_cpu_req;
 					schedule_up_cpu--;
 					schedule_work(&alucard_hotplug_online_work);
 				}
@@ -723,6 +734,7 @@ static void hotplug_work_fn(struct work_struct *work)
 			for_each_possible_cpu(cpu) {
 				per_cpu(od_hotplug_cpuinfo, cpu).online = cpu_online(cpu);
 				per_cpu(od_hotplug_cpuinfo, cpu).up_cpu = 1;
+				per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu = -1;
 			}
 			other_hotplugging = false;
 		}
@@ -773,6 +785,7 @@ int __init alucard_hotplug_init(void)
 		
 		per_cpu(od_hotplug_cpuinfo, cpu).up_cpu = 1;
 		per_cpu(od_hotplug_cpuinfo, cpu).online = cpu_online(cpu);
+		per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu = -1;
 	}
 	mutex_init(&timer_mutex);
 	mutex_unlock(&alucard_hotplug_mutex);
