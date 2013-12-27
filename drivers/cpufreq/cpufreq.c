@@ -462,11 +462,16 @@ static ssize_t store_scaling_min_freq_all_cpus(struct cpufreq_policy *policy, co
 	for_each_possible_cpu(cpu) {
 		struct cpufreq_policy *cpu_policy;
 
-		cpu_policy = per_cpu(cpufreq_cpu_data, cpu);
+		//if (!cpu_online(cpu))
+			/* HOTPLUG IN CPU */
 
-		if (cpu_policy) {
-			ret = store_scaling_min_freq(cpu_policy, buf, count);
-		}
+		cpu_policy = cpufreq_cpu_get(cpu);
+		if (!cpu_policy)
+			continue;
+
+		ret = store_scaling_min_freq(cpu_policy, buf, count);
+
+		cpufreq_cpu_put(cpu_policy);
 	}
 	return count;
 }
@@ -482,11 +487,16 @@ static ssize_t store_scaling_max_freq_all_cpus(struct cpufreq_policy *policy, co
 	for_each_possible_cpu(cpu) {
 		struct cpufreq_policy *cpu_policy;
 
-		cpu_policy = per_cpu(cpufreq_cpu_data, cpu);
+		//if (!cpu_online(cpu))
+			/* HOTPLUG IN CPU */
 
-		if (cpu_policy) {
-			ret = store_scaling_max_freq(cpu_policy, buf, count);
-		}
+		cpu_policy = cpufreq_cpu_get(cpu);
+		if (!cpu_policy)
+			continue;
+
+		ret = store_scaling_max_freq(cpu_policy, buf, count);
+
+		cpufreq_cpu_put(cpu_policy);
 	}
 	return count;
 }
@@ -583,11 +593,16 @@ static ssize_t store_scaling_governor_all_cpus(struct cpufreq_policy *policy, co
 	for_each_possible_cpu(cpu) {
 		struct cpufreq_policy *cpu_policy;
 
-		cpu_policy = per_cpu(cpufreq_cpu_data, cpu);
+		//if (!cpu_online(cpu))
+			/* HOTPLUG IN CPU */
 
-		if (cpu_policy) {
-			ret = store_scaling_governor(cpu_policy, buf, count);
-		}
+		cpu_policy = cpufreq_cpu_get(cpu);
+		if (!cpu_policy)
+			continue;
+
+		ret = store_scaling_governor(cpu_policy, buf, count);
+
+		cpufreq_cpu_put(cpu_policy);
 	}
 	return count;
 }
