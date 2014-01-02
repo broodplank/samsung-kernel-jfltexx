@@ -2138,7 +2138,7 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 					if (max_freq && target_freq > max_freq)
 						target_freq = max_freq;
 
-					if (target_freq != policy->cur && target_freq >= policy->min and && target_freq <= policy->max)
+					if (target_freq != policy->cur && target_freq >= policy->min && target_freq <= policy->max)
 						__cpufreq_driver_target(policy, target_freq, CPUFREQ_RELATION_L);
 
 					cpufreq_cpu_put(policy);
