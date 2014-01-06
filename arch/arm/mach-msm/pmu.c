@@ -90,7 +90,6 @@ static struct platform_device cpu_pmu_device = {
 	.num_resources	= ARRAY_SIZE(cpu_pmu_resource),
 };
 
-
 static struct platform_device *pmu_devices[] = {
 	&cpu_pmu_device,
 #ifdef CONFIG_CPU_HAS_L2_PMU

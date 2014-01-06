@@ -357,7 +357,6 @@ struct dmx_demux {
 	struct dmx_frontend* frontend;    /* Front-end connected to the demux */
 	void* priv;                  /* Pointer to private data of the API client */
 	struct data_buffer dvr_input; /* DVR input buffer */
-
 	struct dentry *debugfs_demux_dir; /* debugfs dir */
 
 	int (*open) (struct dmx_demux* demux);

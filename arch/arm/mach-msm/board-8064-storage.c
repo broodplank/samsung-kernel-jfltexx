@@ -49,7 +49,7 @@ static struct msm_mmc_reg_data mmc_vdd_reg_data[MAX_SDCC_CONTROLLER] = {
 		.lpm_uA = 9000,
 		.hpm_uA = 200000, /* 200mA */
 	},
-#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT	
+#ifdef CONFIG_MMC_MSM_SDC2_SUPPORT
 	/* SDCC2 : External card slot connected after system_rev 08 */
 	[SDCC2] = {
 			.name = "sdc_vdd",

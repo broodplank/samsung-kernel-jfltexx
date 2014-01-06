@@ -69,7 +69,7 @@ static long alarm_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 	uint32_t alarm_type_mask = 1U << alarm_type;
 
 #ifdef CONFIG_RTC_AUTO_PWRON
-	char bootalarm_data[14]; 
+	char bootalarm_data[14];
 #endif
 
 	if (alarm_type >= ANDROID_ALARM_TYPE_COUNT)
@@ -174,7 +174,7 @@ from_old_alarm_set:
 			goto err1;
 		}
 		rv = alarm_set_alarm(bootalarm_data);
-		break; 
+		break;
 #endif
 
 	case ANDROID_ALARM_GET_TIME(0):

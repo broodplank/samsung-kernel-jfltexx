@@ -1649,7 +1649,6 @@ struct platform_device msm_device_bam_dmux = {
 	.id		= -1,
 };
 
-
 static struct msm_watchdog_pdata msm_watchdog_pdata = {
 	.pet_time = 10000,
 	.bark_time = 11000,

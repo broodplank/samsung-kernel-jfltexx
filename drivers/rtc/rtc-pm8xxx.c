@@ -204,7 +204,7 @@ pm8xxx_rtc_set_time(struct device *dev, struct rtc_time *tm)
 			secs, tm->tm_hour, tm->tm_min, tm->tm_sec,
 			tm->tm_mday, tm->tm_mon, tm->tm_year);
 #endif
-			
+
 rtc_rw_fail:
 	if (alarm_enabled)
 		spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
@@ -947,7 +947,7 @@ static void pm8xxx_rtc_shutdown(struct platform_device *pdev)
 				rtc_dd->alarm_rw_base, NUM_8_BIT_RTC_REGS);
 		if (rc < 0)
 			dev_err(rtc_dd->rtc_dev, "PM8xxx write failed\n");
-		
+
 fail_alarm_disable:
 		spin_unlock_irqrestore(&rtc_dd->ctrl_reg_lock, irq_flags);
 	}

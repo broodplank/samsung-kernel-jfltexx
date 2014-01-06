@@ -516,7 +516,7 @@ static int mipi_dsi_power(int enable)
 static int mipi_dsi_power_tft_request(void)
 {
 	int rc = 0;
-#if defined(CONFIG_MACH_JACTIVE_ATT) 
+#if defined(CONFIG_MACH_JACTIVE_ATT)
 	if (system_rev < 10){
 		gpio33 = PM8921_GPIO_PM_TO_SYS(LCD_22V_EN);
 		rc = gpio_request(gpio33, "led_dirver");
@@ -619,7 +619,7 @@ static int mipi_dsi_power_tft_request(void)
 #else
 	gpio27 = PM8921_GPIO_PM_TO_SYS(PMIC_GPIO_LED_DRIVER);
 #endif
-		
+
 
 	rc = gpio_request(gpio27, "led_dirver");
 	if (rc) {
@@ -721,7 +721,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("enable L16 failed, rc=%d\n", rc);
 				return -ENODEV;
 			}
-			
+
 			msleep ( 10 );
 		}
 #elif defined(CONFIG_MACH_JACTIVE_ATT)
@@ -737,7 +737,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("enable L16 failed, rc=%d\n", rc);
 				return -ENODEV;
 			}
-			
+
 			msleep ( 10 );
 		}
 #endif
@@ -798,7 +798,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("set_optimum_mode L16 failed, rc=%d\n", rc);
 				return -EINVAL;
 			}
-			
+
 			rc = regulator_disable(reg_L16);
 			if (rc) {
 				pr_err("disable reg_L16 failed, rc=%d\n", rc);
@@ -814,7 +814,7 @@ static int mipi_panel_power_tft(int enable)
 				pr_err("set_optimum_mode L16 failed, rc=%d\n", rc);
 				return -EINVAL;
 			}
-			
+
 			rc = regulator_disable(reg_L16);
 			if (rc) {
 				pr_err("disable reg_L16 failed, rc=%d\n", rc);
@@ -1035,7 +1035,7 @@ static int mipi_oled_power_set(void)
 						PTR_ERR(reg_L16));
 				return -ENODEV;
 			}
-			
+
 			rc = regulator_set_voltage(reg_L16, 3000000, 3000000);
 			if (rc) {
 				pr_err("set_voltage L16 failed, rc=%d\n", rc);
@@ -1051,7 +1051,7 @@ static int mipi_oled_power_set(void)
 						PTR_ERR(reg_L16));
 				return -ENODEV;
 			}
-			
+
 			rc = regulator_set_voltage(reg_L16, 3000000, 3000000);
 			if (rc) {
 				pr_err("set_voltage L16 failed, rc=%d\n", rc);
@@ -1136,7 +1136,7 @@ static int mipi_panel_power_samsung(int on)
 		rc = mipi_panel_power_oled(1);
 	else
 		rc = mipi_panel_power_oled(0);
-	
+
 #endif
 	return rc;
 }

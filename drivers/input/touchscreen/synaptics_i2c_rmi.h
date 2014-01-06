@@ -25,7 +25,7 @@
 /*#define dev_dbg(dev, fmt, arg...) dev_info(dev, fmt, ##arg)*/
 
 /* DVFS feature : TOUCH BOOSTER */
-#ifdef CONFIG_SEC_DVFS
+#ifdef CONFIG_SEC_DVFS_BOOSTER
 #define TSP_BOOSTER
 #endif
 #ifdef TSP_BOOSTER
@@ -34,8 +34,8 @@
 #define DVFS_STAGE_NONE		0
 #include <linux/cpufreq.h>
 
-#define TOUCH_BOOSTER_OFF_TIME	3000
-#define TOUCH_BOOSTER_CHG_TIME	300
+#define TOUCH_BOOSTER_OFF_TIME	300
+#define TOUCH_BOOSTER_CHG_TIME	200
 #endif
 
 /* To support suface touch, firmware should support data
@@ -212,6 +212,18 @@ struct synaptics_finger {
 	unsigned short mcount;
 };
 
+#if defined(CONFIG_TOUCHSCREEN_FACTORY_PLATFORM)
+/*
+ * struct synaptics_hover - Represents Hovering.
+ * @ state: Hover status.
+ * @ mcount: moving counter for debug.
+ */
+struct synaptics_hover {
+	unsigned char state;
+	unsigned short mcount;
+};
+#endif
+
 /*
  * struct synaptics_rmi4_data - rmi4 device instance data
  * @i2c_client: pointer to associated i2c client
@@ -259,6 +271,9 @@ struct synaptics_rmi4_data {
 
 	struct completion init_done;
 	struct synaptics_finger finger[MAX_NUMBER_OF_FINGERS];
+#if defined (CONFIG_TOUCHSCREEN_FACTORY_PLATFORM)
+	struct synaptics_hover hover;
+#endif
 
 	unsigned char current_page;
 	unsigned char button_0d_enabled;
@@ -296,6 +311,7 @@ struct synaptics_rmi4_data {
 	int fw_version_of_bin;		/* firmware version of binary */
 	int fw_release_date_of_ic;	/* Config release data from IC */
 	int panel_revision;		/* Octa panel revision */
+	int factory_read_panel_wakeup;
 	bool doing_reflash;
 
 #ifdef CONFIG_GLOVE_TOUCH

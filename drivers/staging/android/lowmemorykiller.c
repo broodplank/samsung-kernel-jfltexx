@@ -261,7 +261,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 #endif
 				return 0;
 		}
-		
+
 		oom_score_adj = p->signal->oom_score_adj;
 		if (oom_score_adj < min_score_adj) {
 			task_unlock(p);

@@ -404,7 +404,7 @@ int alarm_set_alarm(char* alarm_data)
 			"Failed to set ALARM, time will be lost on reboot\n");
 		return -2;
 	}
-	return 0; 
+	return 0;
 }
 #endif
 

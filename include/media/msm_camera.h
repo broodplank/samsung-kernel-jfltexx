@@ -1803,8 +1803,8 @@ struct damping_params_t {
 enum actuator_type {
 	ACTUATOR_VCM,
 	ACTUATOR_PIEZO,
-	ACTUATOR_HALL_EFFECT,	
-	ACTUATOR_HVCA,	
+	ACTUATOR_HALL_EFFECT,
+	ACTUATOR_HVCA,
 };
 
 enum msm_actuator_data_type {
@@ -1932,9 +1932,9 @@ struct msm_calib_af {
 	uint16_t inf_dac;
 
 	uint16_t macro_dac1;	/*Mechanical MACRO*/
-	uint16_t macro_dac2;	/*10cm*/	
+	uint16_t macro_dac2;	/*10cm*/
 	uint16_t inf_dac1;		/*Mechanical INFINITY*/
-	uint16_t inf_dac2;		/*1.05M*/	
+	uint16_t inf_dac2;		/*1.05M*/
 	uint16_t start_dac;
 	uint16_t pid_dac;		/* Randy PID */
 };

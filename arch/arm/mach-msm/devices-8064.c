@@ -525,7 +525,7 @@ static struct resource resources_qup_spi_gsbi4[] = {
 		.start = 7,
 		.end   = 8,
 		.flags = IORESOURCE_DMA,
-	},	
+	},
 };
 struct platform_device apq8064_device_qup_spi_gsbi4 = {
 	.name	= "spi_qsd",
@@ -691,7 +691,6 @@ struct platform_device msm_device_uart_dm1 = {
 	},
 };
 #endif
-
 
 static struct resource resources_uart_gsbi7[] = {
 	{
@@ -2829,7 +2828,7 @@ struct msm_mpm_device_data apq8064_mpm_dev_data __initdata = {
 #define MDM2AP_STATUS			49
 #define AP2MDM_STATUS			48
 #define AP2MDM_SOFT_RESET		27
-#define I2S_AP2MDM_SOFT_RESET		0
+#define I2S_AP2MDM_SOFT_RESET	0
 #define AP2MDM_WAKEUP			35
 #define I2S_AP2MDM_WAKEUP		44
 #ifdef CONFIG_MSM_HSIC_GPIO_REV06

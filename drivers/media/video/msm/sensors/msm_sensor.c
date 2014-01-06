@@ -224,7 +224,7 @@ int32_t msm_sensor_write_exp_gain1(struct msm_sensor_ctrl_t *s_ctrl,
 	offset = s_ctrl->sensor_exp_gain_info->vert_offset;
 	if (line > (fl_lines - offset))
 		fl_lines = line + offset;
-		
+
 	if(fl_lines == 1133 || fl_lines == 1130)	//[Liz] //added by jay for pip
 		fl_lines += 20;
 
@@ -320,7 +320,7 @@ int32_t msm_sensor_setting(struct msm_sensor_ctrl_t *s_ctrl,
 		else if (res == 2)
 			res = 4;
 	} else {
-	  CDBG("[JAY] This is new(after 1.00) ver sensor\n"); 
+	  CDBG("[JAY] This is new(after 1.00) ver sensor\n");
 		if(res == 3)
 			res = 0;
 		else if (res == 4)

@@ -3987,6 +3987,7 @@ static struct platform_device *cdp_devices[] __initdata = {
 	&msm_rotator_device,
 #endif
 	&msm8064_pc_cntr,
+	&msm8064_cpu_slp_status,
 	&sec_device_jack,
 #ifdef CONFIG_SENSORS_SSP_C12SD
 	&uv_device,
@@ -5195,7 +5196,7 @@ static void __init apq8064_common_init(void)
 	printk(KERN_DEBUG"[TSP] System revision, LPM mode : %d %d\n",
 				system_rev, poweroff_charging);
 	if (!poweroff_charging) 
-			S5000_tsp_input_init(lcd_tsp_panel_version);
+		S5000_tsp_input_init(lcd_tsp_panel_version);
 #endif
 
 #if defined(CONFIG_VIDEO_MHL_V2)
