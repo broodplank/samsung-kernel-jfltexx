@@ -1568,7 +1568,7 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
 
 	if (!otg->gadget)
 		return;
-	
+
 	if (force_fast_charge == 1 && on == 1)
 		on = 0;
 		

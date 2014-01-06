@@ -52,7 +52,6 @@
 #include <mach/msm_spi.h>
 #include <mach/qdsp5v2/msm_lpa.h>
 #include <mach/dma.h>
-#include <linux/android_pmem.h>
 #include <linux/input/msm_ts.h>
 #include <mach/pmic.h>
 #include <mach/rpc_pmapp.h>
