@@ -33,6 +33,7 @@
 #include "issp_extern.h"
 #include <linux/mfd/pm8xxx/pm8921.h>
 #include "../../../../arch/arm/mach-msm/board-8064.h"
+#include <linux/dvfs_touch_if.h>
 
 #define CYPRESS_GEN		0X00
 #define CYPRESS_FW_VER		0X01
@@ -270,10 +271,14 @@ static void cypress_change_dvfs_lock(struct work_struct *work)
 		container_of(work,
 			struct cypress_touchkey_info, work_dvfs_chg.work);
 	int retval;
+	int min_touch_limit_second = 0;
 
 	mutex_lock(&info->dvfs_lock);
+	min_touch_limit_second = atomic_read(&dvfs_min_touch_limit_second);
+	if (min_touch_limit_second < CPU_MIN_FREQ || min_touch_limit_second > CPU_MAX_FREQ)
+		min_touch_limit_second = DVFS_MIN_TOUCH_LIMIT_SECOND;
 	retval = set_freq_limit(DVFS_TOUCH_ID,
-			MIN_TOUCH_LIMIT_SECOND);
+			min_touch_limit_second);
 	if (retval < 0)
 		dev_err(&info->client->dev,
 			"%s: booster change failed(%d).\n",
@@ -303,25 +308,31 @@ static void cypress_set_dvfs_lock(struct cypress_touchkey_info *info,
 					uint32_t on)
 {
 	int ret = 0;
-
+	int min_touch_limit = 0;
+	int touch_booster_time = 0;
 	mutex_lock(&info->dvfs_lock);
 	if (on == 0) {
 		if (info->dvfs_lock_status) {
+			touch_booster_time = atomic_read(&cyp_touch_booster_off_time);
 			schedule_delayed_work(&info->work_dvfs_off,
-				msecs_to_jiffies(TOUCH_BOOSTER_OFF_TIME));
+				msecs_to_jiffies(touch_booster_time));
 		}
 	} else if (on == 1) {
 		cancel_delayed_work(&info->work_dvfs_off);
 		if (!info->dvfs_lock_status) {
+			min_touch_limit = atomic_read(&dvfs_min_touch_limit);
+			if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ)
+				min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
 			ret = set_freq_limit(DVFS_TOUCH_ID,
-					MIN_TOUCH_LIMIT);
+					min_touch_limit);
 			if (ret < 0)
 				dev_err(&info->client->dev,
 					"%s: cpu first lock failed(%d)\n",
 					__func__, ret);
 
+			touch_booster_time = atomic_read(&cyp_touch_booster_chg_time);
 			schedule_delayed_work(&info->work_dvfs_chg,
-				msecs_to_jiffies(TOUCH_BOOSTER_CHG_TIME));
+				msecs_to_jiffies(touch_booster_time));
 			info->dvfs_lock_status = true;
 		}
 	} else if (on == 2) {
@@ -601,13 +612,6 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 		}
 
 	while (retry < 3) {
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, CYPRESS_GEN, data, 4);
 		if (ret < 0) {
 			dev_err(&info->client->dev, "[TouchKey] Failed to read Keycode_reg.\n");
@@ -623,24 +627,11 @@ static void cypress_touchkey_glove_work(struct work_struct *work)
 			data[3] = 0x40;
 		}
 
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		count = i2c_touchkey_write(info->client, data, 4);
 
 		msleep(50);
 
 		/* Check autocal status */
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, CYPRESS_GEN, data, 6);
 
 		if (glove_value == 1) {
@@ -719,13 +710,6 @@ void touchkey_flip_cover(int value)
 		}
 
 	while (retry < 3) {
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 4);
 		if (ret < 0) {
 			dev_err(&info->client->dev, "[Touchkey] Failed to read Keycode_reg %d times.\n",
@@ -742,24 +726,11 @@ void touchkey_flip_cover(int value)
 				data[3] = 0x40;
 		}
 
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		count = i2c_touchkey_write(info->client, data, 4);
 
 		msleep(100);
 
 		/* Check autocal status */
-
-		if (!(info->enabled)) {
-			printk(KERN_ERR "[TouchKey] %s %d Touchkey is not enabled.\n",
-				__func__, __LINE__);
-			return ;
-			}
-
 		ret = i2c_touchkey_read(info->client, KEYCODE_REG, data, 6);
 
 		if (value == 1){

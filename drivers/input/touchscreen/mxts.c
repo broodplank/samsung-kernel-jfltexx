@@ -29,6 +29,7 @@
 #ifdef CONFIG_HAS_EARLYSUSPEND
 #include <linux/earlysuspend.h>
 #endif
+#include <linux/dvfs_touch_if.h>
 
 /*#define dev_dbg(dev, fmt, arg...) dev_info(dev, fmt, ##arg)*/
 
@@ -539,17 +540,23 @@ static void mxt_set_dvfs_off(struct work_struct *work)
 static void mxt_set_dvfs_lock(struct mxt_data *data, uint32_t on)
 {
 	int ret = 0;
+	int min_touch_limit = 0;
+	int touch_booster_time = 0;
 
 	mutex_lock(&data->dvfs_lock);
 	if (on == 0) {
 		if (data->dvfs_lock_status) {
+			touch_booster_time = atomic_read(&mxts_touch_booster_off_time);
 			schedule_delayed_work(&data->work_dvfs_off,
-				msecs_to_jiffies(TOUCH_BOOSTER_OFF_TIME));
+				msecs_to_jiffies(touch_booster_time));
 		}
 	} else if (on == 1) {
 		cancel_delayed_work(&data->work_dvfs_off);
 		if (!data->dvfs_lock_status) {
-			ret = set_freq_limit(DVFS_TOUCH_ID, MIN_TOUCH_LIMIT);
+			min_touch_limit = atomic_read(&dvfs_min_touch_limit);
+			if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ)
+				min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
+			ret = set_freq_limit(DVFS_TOUCH_ID, min_touch_limit);
 
 			if (ret < 0)
 				pr_err("%s: cpu lock failed(%d)\n",\

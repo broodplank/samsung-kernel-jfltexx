@@ -27,6 +27,7 @@
 #include <linux/earlysuspend.h>
 #endif
 #include "synaptics_i2c_rmi.h"
+#include <linux/dvfs_touch_if.h>
 
 #define DRIVER_NAME "synaptics_rmi4_i2c"
 
@@ -615,6 +616,7 @@ static void synaptics_change_dvfs_lock(struct work_struct *work)
 		container_of(work,
 			struct synaptics_rmi4_data, work_dvfs_chg.work);
 	int retval = 0;
+	int min_touch_limit_second = 0;
 
 	mutex_lock(&rmi4_data->dvfs_lock);
 
@@ -624,9 +626,12 @@ static void synaptics_change_dvfs_lock(struct work_struct *work)
 				"%s: do fw update, do not change cpu frequency.\n",
 				__func__);
 		} else {
-		retval = set_freq_limit(DVFS_TOUCH_ID,
-				MIN_TOUCH_LIMIT_SECOND);
-		rmi4_data->dvfs_freq = MIN_TOUCH_LIMIT_SECOND;
+			min_touch_limit_second = atomic_read(&dvfs_min_touch_limit_second);
+			if (min_touch_limit_second < CPU_MIN_FREQ || min_touch_limit_second > CPU_MAX_FREQ)
+				min_touch_limit_second = DVFS_MIN_TOUCH_LIMIT_SECOND;
+			retval = set_freq_limit(DVFS_TOUCH_ID,
+					min_touch_limit_second);
+			rmi4_data->dvfs_freq = min_touch_limit_second;
 		}
 	} else if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_SINGLE) {
 		retval = set_freq_limit(DVFS_TOUCH_ID, -1);
@@ -672,6 +677,8 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 					int on)
 {
 	int ret = 0;
+	int min_touch_limit = 0;
+	int touch_booster_time = 0;
 
 	if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_NONE) {
 		dev_info(&rmi4_data->i2c_client->dev,
@@ -683,8 +690,9 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 	mutex_lock(&rmi4_data->dvfs_lock);
 	if (on == 0) {
 		if (rmi4_data->dvfs_lock_status) {
+			touch_booster_time = atomic_read(&syn_touch_booster_off_time);
 			schedule_delayed_work(&rmi4_data->work_dvfs_off,
-				msecs_to_jiffies(TOUCH_BOOSTER_OFF_TIME));
+				msecs_to_jiffies(touch_booster_time));
 		}
 	} else if (on > 0) {
 		cancel_delayed_work(&rmi4_data->work_dvfs_off);
@@ -692,10 +700,13 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 		if (rmi4_data->dvfs_old_stauts != on) {
 			cancel_delayed_work(&rmi4_data->work_dvfs_chg);
 			if (1/*!rmi4_data->dvfs_lock_status*/) {
-				if (rmi4_data->dvfs_freq != MIN_TOUCH_LIMIT) {
+				min_touch_limit = atomic_read(&dvfs_min_touch_limit);
+				if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ)
+					min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
+				if (rmi4_data->dvfs_freq != min_touch_limit) {
 					ret = set_freq_limit(DVFS_TOUCH_ID,
-							MIN_TOUCH_LIMIT);
-					rmi4_data->dvfs_freq = MIN_TOUCH_LIMIT;
+							min_touch_limit);
+					rmi4_data->dvfs_freq = min_touch_limit;
 
 					if (ret < 0)
 						dev_err(&rmi4_data->i2c_client->dev,
@@ -703,8 +714,9 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 							__func__, ret);
 				}
 
+				touch_booster_time = atomic_read(&syn_touch_booster_chg_time);
 				schedule_delayed_work(&rmi4_data->work_dvfs_chg,
-					msecs_to_jiffies(TOUCH_BOOSTER_CHG_TIME));
+					msecs_to_jiffies(touch_booster_time));
 
 				rmi4_data->dvfs_lock_status = true;
 			}

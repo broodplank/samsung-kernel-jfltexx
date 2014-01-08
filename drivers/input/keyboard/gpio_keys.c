@@ -31,7 +31,10 @@
 #include <linux/spinlock.h>
 #ifdef CONFIG_SEC_DEBUG
 #include <mach/sec_debug.h>
+#else
+#include <linux/sec_class.h>
 #endif
+#include <linux/dvfs_touch_if.h>
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -345,9 +348,13 @@ static void gpio_key_change_dvfs_lock(struct work_struct *work)
 		container_of(work,
 			struct gpio_button_data, work_dvfs_chg.work);
 	int retval;
+	int min_touch_limit_second = 0;
 	mutex_lock(&bdata->dvfs_lock);
+	min_touch_limit_second = atomic_read(&dvfs_min_touch_limit_second);
+	if (min_touch_limit_second < CPU_MIN_FREQ || min_touch_limit_second > CPU_MAX_FREQ)
+		min_touch_limit_second = DVFS_MIN_TOUCH_LIMIT_SECOND;
 	retval = set_freq_limit(DVFS_TOUCH_ID,
-			MIN_TOUCH_LIMIT_SECOND);
+			min_touch_limit_second);
 	if (retval < 0)
 		printk(KERN_ERR
 			"%s: booster change failed(%d).\n",
@@ -375,24 +382,31 @@ static void gpio_key_set_dvfs_lock(struct gpio_button_data *bdata,
 					uint32_t on)
 {
 	int ret = 0;
+	int min_touch_limit = 0;
+	int gpio_key_booster_time = 0;
 	mutex_lock(&bdata->dvfs_lock);
 	if (on == 0) {
 		if (bdata->dvfs_lock_status) {
+			gpio_key_booster_time = atomic_read(&gpio_key_booster_off_time);
 			schedule_delayed_work(&bdata->work_dvfs_off,
-				msecs_to_jiffies(KEY_BOOSTER_OFF_TIME));
+				msecs_to_jiffies(gpio_key_booster_time));
 		}
 	} else if (on == 1) {
 		cancel_delayed_work(&bdata->work_dvfs_off);
 		if (!bdata->dvfs_lock_status) {
+			min_touch_limit = atomic_read(&dvfs_min_touch_limit);
+			if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ)
+				min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
 			ret = set_freq_limit(DVFS_TOUCH_ID,
-					MIN_TOUCH_LIMIT);
+					min_touch_limit);
 			if (ret < 0)
 				printk(KERN_ERR
 					"%s: cpu first lock failed(%d)\n",
 					__func__, ret);
 
+			gpio_key_booster_time = atomic_read(&gpio_key_booster_chg_time);
 			schedule_delayed_work(&bdata->work_dvfs_chg,
-				msecs_to_jiffies(KEY_BOOSTER_CHG_TIME));
+				msecs_to_jiffies(gpio_key_booster_time));
 			bdata->dvfs_lock_status = true;
 		}
 	}
@@ -899,8 +913,10 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	struct input_dev *input;
 	int i, error;
 	int wakeup = 0;
+#ifdef CONFIG_SENSORS_HALL
 	int ret = 0;
 	struct device *sec_key;
+#endif
 
 	if (!pdata) {
 		error = gpio_keys_get_devtree_pdata(dev, &alt_pdata);
@@ -990,8 +1006,8 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 	}
 	input_sync(input);
 
-	sec_key = device_create(sec_class, NULL, 0, NULL, "sec_key");
 #ifdef CONFIG_SENSORS_HALL
+	sec_key = device_create(sec_class, NULL, 0, NULL, "sec_key");
 	if (IS_ERR(sec_key))
 		pr_err("Failed to create device(sec_key)!\n");
 
@@ -1000,7 +1016,7 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 		pr_err("Failed to create device file(%s)!, error: %d\n",
 			dev_attr_hall_detect.attr.name, ret);
 	}
-#endif
+
 	ret = device_create_file(sec_key, &dev_attr_sec_key_pressed);
 	if (ret) {
 		pr_err("Failed to create device file in sysfs entries(%s)!\n",
@@ -1012,6 +1028,7 @@ static int __devinit gpio_keys_probe(struct platform_device *pdev)
 			dev_attr_wakeup_keys.attr.name, ret);
 	}
 	dev_set_drvdata(sec_key, ddata);
+#endif
 	device_init_wakeup(&pdev->dev, 1);
 
 	return 0;

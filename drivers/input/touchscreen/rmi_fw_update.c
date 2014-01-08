@@ -23,6 +23,7 @@
 #include <linux/firmware.h>
 #include "synaptics_i2c_rmi.h"
 #include <linux/regulator/consumer.h>
+#include <linux/dvfs_touch_if.h>
 
 #define F01_DEVICE_STATUS	0X0004
 
@@ -730,10 +731,14 @@ static int fwu_enter_flash_prog(void)
 static int fwu_do_reflash(void)
 {
 	int retval;
+	int min_touch_limit = 0;
 
 #ifdef TSP_BOOSTER
+	min_touch_limit = atomic_read(&dvfs_min_touch_limit);
+	if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ)
+		min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
 	retval = set_freq_limit(DVFS_TOUCH_ID,
-				MIN_TOUCH_LIMIT);
+				min_touch_limit);
 	if (retval < 0)
 		dev_err(&fwu->rmi4_data->i2c_client->dev,
 			"%s: dvfs failed at fw update.\n",
