@@ -110,7 +110,7 @@ static ssize_t store_dvfs_min_touch_limit_second(struct kobject *kobj, struct ko
 		return -EINVAL;
 	}
 
-	input = max(min(input, 1350000),702000);
+	input = max(min(input, 1350000),486000);
 
 	if (input != atomic_read(&dvfs_min_touch_limit_second)) {
 		/* update only if valid value provided */
@@ -173,7 +173,7 @@ static ssize_t store_mxts_touch_booster_off_time(struct kobject *kobj, struct ko
 		return -EINVAL;
 	}
 
-	input = max(min(input, 500),100);
+	input = max(min(input, 1000),100);
 
 	if (input !=  atomic_read(&mxts_touch_booster_off_time)) {
 		/* update only if valid value provided */
@@ -236,7 +236,7 @@ static ssize_t store_gpio_key_booster_off_time(struct kobject *kobj, struct kobj
 		return -EINVAL;
 	}
 
-	input = max(min(input, 600),200);
+	input = max(min(input, 1000),200);
 
 	if (input !=  atomic_read(&gpio_key_booster_off_time)) {
 		/* update only if valid value provided */
@@ -257,7 +257,7 @@ static ssize_t store_gpio_key_booster_chg_time(struct kobject *kobj, struct kobj
 		return -EINVAL;
 	}
 
-	input = max(min(input, 500),100);
+	input = max(min(input, 1000),100);
 
 	if (input !=  atomic_read(&gpio_key_booster_chg_time)) {
 		/* update only if valid value provided */
