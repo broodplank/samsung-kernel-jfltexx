@@ -34,7 +34,7 @@
 #include <linux/mfd/pm8xxx/pm8921.h>
 #include "../../../../arch/arm/mach-msm/board-8064.h"
 #include <linux/dvfs_touch_if.h>
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_SEC_DVFS_BOOSTER
 static int prev_min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
 static int prev_min_touch_limit_second = DVFS_MIN_TOUCH_LIMIT_SECOND;
 #endif

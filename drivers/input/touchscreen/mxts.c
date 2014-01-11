@@ -30,7 +30,7 @@
 #include <linux/earlysuspend.h>
 #endif
 #include <linux/dvfs_touch_if.h>
-#ifdef TSP_BOOSTER
+#ifdef CONFIG_SEC_DVFS_BOOSTER
 static int prev_min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
 #endif
 
