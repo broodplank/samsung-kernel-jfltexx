@@ -24,6 +24,9 @@
 #include "synaptics_i2c_rmi.h"
 #include <linux/regulator/consumer.h>
 #include <linux/dvfs_touch_if.h>
+#ifdef TSP_BOOSTER
+static int prev_min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
+#endif
 
 #define F01_DEVICE_STATUS	0X0004
 
@@ -735,8 +738,11 @@ static int fwu_do_reflash(void)
 
 #ifdef TSP_BOOSTER
 	min_touch_limit = atomic_read(&dvfs_min_touch_limit);
-	if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ)
-		min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
+	if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ) {
+		min_touch_limit = prev_min_touch_limit;
+	} else {
+		prev_min_touch_limit = min_touch_limit;
+	}
 	retval = set_freq_limit(DVFS_TOUCH_ID,
 				min_touch_limit);
 	if (retval < 0)

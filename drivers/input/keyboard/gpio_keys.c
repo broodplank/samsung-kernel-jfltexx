@@ -35,6 +35,10 @@
 #include <linux/sec_class.h>
 #endif
 #include <linux/dvfs_touch_if.h>
+#ifdef TSP_BOOSTER
+static int prev_min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
+static int prev_min_touch_limit_second = DVFS_MIN_TOUCH_LIMIT_SECOND;
+#endif
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -349,10 +353,14 @@ static void gpio_key_change_dvfs_lock(struct work_struct *work)
 			struct gpio_button_data, work_dvfs_chg.work);
 	int retval;
 	int min_touch_limit_second = 0;
+
 	mutex_lock(&bdata->dvfs_lock);
 	min_touch_limit_second = atomic_read(&dvfs_min_touch_limit_second);
-	if (min_touch_limit_second < CPU_MIN_FREQ || min_touch_limit_second > CPU_MAX_FREQ)
-		min_touch_limit_second = DVFS_MIN_TOUCH_LIMIT_SECOND;
+	if (min_touch_limit_second < CPU_MIN_FREQ || min_touch_limit_second > CPU_MAX_FREQ) {
+		min_touch_limit_second = prev_min_touch_limit_second;
+	} else {
+		prev_min_touch_limit_second = min_touch_limit_second;
+	}
 	retval = set_freq_limit(DVFS_TOUCH_ID,
 			min_touch_limit_second);
 	if (retval < 0)
@@ -395,8 +403,11 @@ static void gpio_key_set_dvfs_lock(struct gpio_button_data *bdata,
 		cancel_delayed_work(&bdata->work_dvfs_off);
 		if (!bdata->dvfs_lock_status) {
 			min_touch_limit = atomic_read(&dvfs_min_touch_limit);
-			if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ)
-				min_touch_limit = DVFS_MIN_TOUCH_LIMIT;
+			if (min_touch_limit < CPU_MIN_FREQ || min_touch_limit > CPU_MAX_FREQ) {
+				min_touch_limit = prev_min_touch_limit;
+			} else {
+				prev_min_touch_limit = min_touch_limit;
+			}
 			ret = set_freq_limit(DVFS_TOUCH_ID,
 					min_touch_limit);
 			if (ret < 0)
