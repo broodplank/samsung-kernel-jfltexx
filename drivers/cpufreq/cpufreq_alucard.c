@@ -54,7 +54,6 @@ struct cpufreq_alucard_cpuinfo {
 	struct delayed_work work;
 	struct cpufreq_policy *cur_policy;
 	int cpu;
-	int cpu_load;
 	unsigned int enable:1;
 	/*
 	 * mutex that serializes governor limit change with
@@ -82,7 +81,6 @@ static struct alucard_tuners {
 	atomic_t freq_responsiveness;
 	atomic_t pump_inc_step;
 	atomic_t pump_dec_step;
-	atomic_t cpus_boost;
 } alucard_tuners_ins = {
 	.sampling_rate = ATOMIC_INIT(60000),
 	.inc_cpu_load_at_min_freq = ATOMIC_INIT(60),
@@ -96,7 +94,6 @@ static struct alucard_tuners {
 #endif
 	.pump_inc_step = ATOMIC_INIT(2),
 	.pump_dec_step = ATOMIC_INIT(1),
-	.cpus_boost = ATOMIC_INIT(0),
 };
 
 /************************** sysfs interface ************************/
@@ -116,7 +113,6 @@ show_one(dec_cpu_load, dec_cpu_load);
 show_one(freq_responsiveness, freq_responsiveness);
 show_one(pump_inc_step, pump_inc_step);
 show_one(pump_dec_step, pump_dec_step);
-show_one(cpus_boost, cpus_boost);
 
 /**
  * update_sampling_rate - update sampling rate effective immediately if needed.
@@ -345,27 +341,6 @@ static ssize_t store_pump_dec_step(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-/* cpus_boost */
-static ssize_t store_cpus_boost(struct kobject *a, struct attribute *b,
-			       const char *buf, size_t count)
-{
-	int input;
-	int ret;
-
-	ret = sscanf(buf, "%d", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	input = max(min(input, 2), 0);
-
-	if (input == atomic_read(&alucard_tuners_ins.cpus_boost))
-		return count;
-
-	atomic_set(&alucard_tuners_ins.cpus_boost,input);
-
-	return count;
-}
-
 define_one_global_rw(sampling_rate);
 define_one_global_rw(inc_cpu_load_at_min_freq);
 define_one_global_rw(inc_cpu_load);
@@ -374,7 +349,6 @@ define_one_global_rw(dec_cpu_load);
 define_one_global_rw(freq_responsiveness);
 define_one_global_rw(pump_inc_step);
 define_one_global_rw(pump_dec_step);
-define_one_global_rw(cpus_boost);
 
 static struct attribute *alucard_attributes[] = {
 	&sampling_rate.attr,
@@ -385,7 +359,6 @@ static struct attribute *alucard_attributes[] = {
 	&freq_responsiveness.attr,
 	&pump_inc_step.attr,
 	&pump_dec_step.attr,
-	&cpus_boost.attr,
 	NULL
 };
 
@@ -414,10 +387,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 #endif
 	unsigned int next_freq = 0;
 	int cur_load = -1;
-	int avg_load = 0;
 	unsigned int cpu;
-	int j, online = 0;
-	bool cpus_boost = atomic_read(&alucard_tuners_ins.cpus_boost) > 0;
 	
 	cpu = this_alucard_cpuinfo->cpu;
 	cpu_policy = this_alucard_cpuinfo->cur_policy;
@@ -438,28 +408,8 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 
 	/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",cpu, wall_time, idle_time);*/
 	if (wall_time >= idle_time) { /*if wall_time < idle_time, evaluate cpu load next time*/
-		this_alucard_cpuinfo->cpu_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 1;/*if wall_time is equal to idle_time cpu_load is equal to 1*/
-		if (cpus_boost == 2) {
-			for_each_online_cpu(j) {
-				struct cpufreq_alucard_cpuinfo *j_alucard_cpuinfo;
-				j_alucard_cpuinfo = &per_cpu(od_alucard_cpuinfo, j);
-				/* Get maximum cpuload*/
-				if (cur_load < j_alucard_cpuinfo->cpu_load) {
-					cur_load = j_alucard_cpuinfo->cpu_load;
-				}
-			}
-		} else if (cpus_boost == 1) {
-			for_each_online_cpu(j) {
-				struct cpufreq_alucard_cpuinfo *j_alucard_cpuinfo;
-				j_alucard_cpuinfo = &per_cpu(od_alucard_cpuinfo, j);
-				/* Get average cpuload*/
-				avg_load += j_alucard_cpuinfo->cpu_load;
-				online++;
-			}
-			cur_load = (avg_load / online);
-		} else {
-			cur_load = this_alucard_cpuinfo->cpu_load;
-		}
+		cur_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 1;/*if wall_time is equal to idle_time cpu_load is equal to 1*/
+		
 		/* Checking Frequency Limit */
 		min_freq = cpu_policy->min;
 		/* Maximum increasing frequency possible */
@@ -578,8 +528,6 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 				return rc;
 			}
 		}
-
-		this_alucard_cpuinfo->cpu_load = 0;
 
 		mutex_unlock(&alucard_mutex);
 
