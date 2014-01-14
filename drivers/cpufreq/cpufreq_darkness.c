@@ -457,7 +457,10 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 		if (this_darkness_cpuinfo->freq_table[index].frequency != cpu_policy->cur) {
 			cpufreq_frequency_table_target(cpu_policy, this_darkness_cpuinfo->freq_table, next_freq,
 				CPUFREQ_RELATION_L, &index);
+		} else {
+			return;
 		}
+		
 		next_freq = this_darkness_cpuinfo->freq_table[index].frequency;
 #endif
 		/*printk(KERN_ERR "FREQ CALC.: CPU[%u], load[%d], target freq[%u], cur freq[%u], min freq[%u], max_freq[%u]\n",cpu, cur_load, next_freq, cpu_policy->cur, cpu_policy->min, max_freq);*/
