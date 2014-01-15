@@ -94,6 +94,7 @@ static struct alucard_tuners {
 #endif
 	.pump_inc_step = ATOMIC_INIT(2),
 	.pump_dec_step = ATOMIC_INIT(1),
+
 };
 
 /************************** sysfs interface ************************/
@@ -443,15 +444,12 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 		} else if (cur_load < dec_cpu_load && cpu_policy->cur > min_freq) {
 			tmp_freq = max(cpu_policy->cur - (pump_dec_step * 108000), min_freq);
 		} else {
-			/* if cpu frequency is already at maximum or minimum or cur_load is between inc_cpu_load and dec_cpu_load var, we don't need to set frequency! */
-			return;
+			/* if cpu frequency is already at maximum or minimum or cur_load is between inc_cpu_load and dec_cpu_load var, we don't need to set frequency!
+			return; */
+			tmp_freq = cpu_policy->cur;
 		}
 		cpufreq_frequency_table_target(cpu_policy, this_alucard_cpuinfo->freq_table, tmp_freq,
 			CPUFREQ_RELATION_L, &index);
-		/*if (this_alucard_cpuinfo->freq_table[index].frequency != cpu_policy->cur) {
-			cpufreq_frequency_table_target(cpu_policy, this_alucard_cpuinfo->freq_table, tmp_freq,
-				CPUFREQ_RELATION_L, &index);
-		}*/
 	 	next_freq = this_alucard_cpuinfo->freq_table[index].frequency;
 #endif
 		/*printk(KERN_ERR "FREQ CALC.: CPU[%u], load[%d], target freq[%u], cur freq[%u], min freq[%u], max_freq[%u]\n",cpu, cur_load, next_freq, cpu_policy->cur, cpu_policy->min, max_freq);*/

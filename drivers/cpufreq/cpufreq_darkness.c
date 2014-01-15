@@ -423,7 +423,7 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 
 	/*printk(KERN_ERR "TIMER CPU[%u], wall[%u], idle[%u]\n",cpu, wall_time, idle_time);*/
 	if (wall_time >= idle_time) { /*if wall_time < idle_time, evaluate cpu load next time*/
-		cur_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 1;/*if wall_time is equal to idle_time cpu_load is equal to 1*/
+		cur_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 1;/*if wall_time is equal to idle_time cpu_load is equal to 1*/	
 		/* Checking Frequency Limit */
 		/*if (max_freq > cpu_policy->max)
 			max_freq = cpu_policy->max;
@@ -457,8 +457,8 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 		if (this_darkness_cpuinfo->freq_table[index].frequency != cpu_policy->cur) {
 			cpufreq_frequency_table_target(cpu_policy, this_darkness_cpuinfo->freq_table, next_freq,
 				CPUFREQ_RELATION_L, &index);
-		} else {
-			return;
+		/* } else {
+			return; */
 		}
 		
 		next_freq = this_darkness_cpuinfo->freq_table[index].frequency;
