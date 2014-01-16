@@ -47,18 +47,12 @@ static struct hotplug_tuners {
 	atomic_t cpu_up_rate;
 	atomic_t cpu_down_rate;
 	atomic_t maxcoreslimit;
-#ifndef CONFIG_CPU_EXYNOS4210
-	atomic_t accuratecpufreq;
-#endif
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = ATOMIC_INIT(60000),
 	.hotplug_enable = ATOMIC_INIT(0),
 	.cpu_up_rate = ATOMIC_INIT(10),
 	.cpu_down_rate = ATOMIC_INIT(20),
 	.maxcoreslimit = ATOMIC_INIT(NR_CPUS),
-#ifndef CONFIG_CPU_EXYNOS4210
-	.accuratecpufreq = ATOMIC_INIT(0),
-#endif
 };
 
 #define MAX_HOTPLUG_RATE		(40)
@@ -215,9 +209,6 @@ show_one(hotplug_enable, hotplug_enable);
 show_one(cpu_up_rate, cpu_up_rate);
 show_one(cpu_down_rate, cpu_down_rate);
 show_one(maxcoreslimit, maxcoreslimit);
-#ifndef CONFIG_CPU_EXYNOS4210
-show_one(accuratecpufreq, accuratecpufreq);
-#endif
 
 #define show_hotplug_param(file_name, num_core, up_down)		\
 static ssize_t show_##file_name##_##num_core##_##up_down		\
@@ -509,36 +500,11 @@ static ssize_t store_maxcoreslimit(struct kobject *a, struct attribute *b,
 	return count;
 }
 
-#ifndef CONFIG_CPU_EXYNOS4210
-/* accuratecpufreq */
-static ssize_t store_accuratecpufreq(struct kobject *a, struct attribute *b,
-				  const char *buf, size_t count)
-{
-	int input;
-	int ret;
-
-	ret = sscanf(buf, "%d", &input);
-	if (ret != 1)
-		return -EINVAL;
-
-	input = input > 0; 
-
-	if (atomic_read(&hotplug_tuners_ins.accuratecpufreq) == input)
-		return count;
-
-	atomic_set(&hotplug_tuners_ins.accuratecpufreq, input);
-
-	return count;
-}
-#endif
 define_one_global_rw(hotplug_sampling_rate);
 define_one_global_rw(hotplug_enable);
 define_one_global_rw(cpu_up_rate);
 define_one_global_rw(cpu_down_rate);
 define_one_global_rw(maxcoreslimit);
-#ifndef CONFIG_CPU_EXYNOS4210
-define_one_global_rw(accuratecpufreq);
-#endif
 
 static struct attribute *alucard_hotplug_attributes[] = {
 	&hotplug_sampling_rate.attr,
@@ -570,9 +536,6 @@ static struct attribute *alucard_hotplug_attributes[] = {
 	&cpu_up_rate.attr,
 	&cpu_down_rate.attr,
 	&maxcoreslimit.attr,
-#ifndef CONFIG_CPU_EXYNOS4210
-	&accuratecpufreq.attr,
-#endif
 	NULL
 };
 
@@ -587,9 +550,6 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 	int upmaxcoreslimit = atomic_read(&hotplug_tuners_ins.maxcoreslimit);
 	int up_rate = atomic_read(&hotplug_tuners_ins.cpu_up_rate);
 	int down_rate = atomic_read(&hotplug_tuners_ins.cpu_down_rate);
-#ifndef CONFIG_CPU_EXYNOS4210
-	bool accuratecpufreq = atomic_read(&hotplug_tuners_ins.accuratecpufreq)  > 0;
-#endif
 	bool check_up = false, check_down = false;
 	int schedule_down_cpu = 1;
 	int schedule_up_cpu = 1;
@@ -661,10 +621,7 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 			if (wall_time >= idle_time) { /*if wall_time < idle_time, evaluate cpu load next time*/
 					cur_load = wall_time > idle_time ? (100 * (wall_time - idle_time)) / wall_time : 0;/*if wall_time is equal to idle_time cpu_load is equal to 0*/
 #ifndef CONFIG_CPU_EXYNOS4210
-					if (accuratecpufreq)
-						cur_freq = acpuclk_get_rate(cpu);
-					else
-						cur_freq = cpufreq_quick_get(cpu);
+					cur_freq = acpuclk_get_rate(cpu);
 #else
 					cur_freq = cpufreq_quick_get(cpu);
 #endif
