@@ -29,6 +29,7 @@
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include "../../arch/arm/mach-msm/acpuclock.h"
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -623,6 +624,7 @@ static void nightmare_check_cpu(struct cpufreq_nightmare_cpuinfo *this_nightmare
 	struct cpufreq_policy *cpu_policy;
 	unsigned int min_freq;
 	unsigned int max_freq;
+	unsigned int cur_freq;
 #ifdef CONFIG_CPU_EXYNOS4210
 	int up_sf_step = atomic_read(&nightmare_tuners_ins.up_sf_step);
 	int down_sf_step = atomic_read(&nightmare_tuners_ins.down_sf_step);
@@ -679,45 +681,46 @@ static void nightmare_check_cpu(struct cpufreq_nightmare_cpuinfo *this_nightmare
 		if (min_freq < cpu_policy->min)
 			min_freq = cpu_policy->min;*/
 		min_freq = cpu_policy->min;
-		max_freq = cpu_policy->max;		
+		max_freq = cpu_policy->max;
+		cur_freq = acpuclk_get_rate(cpu);
 		/* CPUs Online Scale Frequency*/
-		if (cpu_policy->cur < freq_for_responsiveness) {
+		if (cur_freq < freq_for_responsiveness) {
 			inc_cpu_load = atomic_read(&nightmare_tuners_ins.inc_cpu_load_at_min_freq);
 			freq_step = atomic_read(&nightmare_tuners_ins.freq_step_at_min_freq);
 			freq_up_brake = atomic_read(&nightmare_tuners_ins.freq_up_brake_at_min_freq);
-		} else if (cpu_policy->cur > freq_for_responsiveness_max) {
+		} else if (cur_freq > freq_for_responsiveness_max) {
 			freq_step_dec = atomic_read(&nightmare_tuners_ins.freq_step_dec_at_max_freq);
 		}		
 		/* Check for frequency increase or for frequency decrease */
 #ifdef CONFIG_CPU_EXYNOS4210
-		if (cur_load >= inc_cpu_load && cpu_policy->cur < max_freq) {
-			tmp_freq = max(min((cpu_policy->cur + ((cur_load + freq_step - freq_up_brake == 0 ? 1 : cur_load + freq_step - freq_up_brake) * 2000)), max_freq), min_freq);
-		} else if (cur_load < dec_cpu_load && cpu_policy->cur > min_freq) {
-			tmp_freq = max(min((cpu_policy->cur - ((100 - cur_load + freq_step_dec == 0 ? 1 : 100 - cur_load + freq_step_dec) * 2000)), max_freq), min_freq);
+		if (cur_load >= inc_cpu_load && cur_freq < max_freq) {
+			tmp_freq = max(min((cur_freq + ((cur_load + freq_step - freq_up_brake == 0 ? 1 : cur_load + freq_step - freq_up_brake) * 2000)), max_freq), min_freq);
+		} else if (cur_load < dec_cpu_load && cur_freq > min_freq) {
+			tmp_freq = max(min((cur_freq - ((100 - cur_load + freq_step_dec == 0 ? 1 : 100 - cur_load + freq_step_dec) * 2000)), max_freq), min_freq);
 		}
 		next_freq = (tmp_freq / 100000) * 100000;
-		if ((next_freq > cpu_policy->cur
+		if ((next_freq > cur_freq
 			&& (tmp_freq % 100000 > up_sf_step * 1000))
-			|| (next_freq < cpu_policy->cur
+			|| (next_freq < cur_freq
 			&& (tmp_freq % 100000 > down_sf_step * 1000))) {
 				next_freq += 100000;
 		}
 #else
-		if (cur_load >= inc_cpu_load && cpu_policy->cur < max_freq) {
-			tmp_freq = max(min((cpu_policy->cur + ((cur_load + freq_step - freq_up_brake == 0 ? 1 : cur_load + freq_step - freq_up_brake) * 3780)), max_freq), min_freq);
-		} else if (cur_load < dec_cpu_load && cpu_policy->cur > min_freq) {
-			tmp_freq = max(min((cpu_policy->cur - ((100 - cur_load + freq_step_dec == 0 ? 1 : 100 - cur_load + freq_step_dec) * 3780)), max_freq), min_freq);
+		if (cur_load >= inc_cpu_load && cur_freq < max_freq) {
+			tmp_freq = max(min((cur_freq + ((cur_load + freq_step - freq_up_brake == 0 ? 1 : cur_load + freq_step - freq_up_brake) * 3780)), max_freq), min_freq);
+		} else if (cur_load < dec_cpu_load && cur_freq > min_freq) {
+			tmp_freq = max(min((cur_freq - ((100 - cur_load + freq_step_dec == 0 ? 1 : 100 - cur_load + freq_step_dec) * 3780)), max_freq), min_freq);
 		} else {
 			/* if cpu frequency is already at maximum or minimum or cur_load is between inc_cpu_load and dec_cpu_load var, we don't need to set frequency!
 			return; */
-			tmp_freq = cpu_policy->cur;
+			tmp_freq = cur_freq;
 		}
 		cpufreq_frequency_table_target(cpu_policy, this_nightmare_cpuinfo->freq_table, tmp_freq,
 			CPUFREQ_RELATION_L, &index);
 	 	next_freq = this_nightmare_cpuinfo->freq_table[index].frequency;
 #endif
-		/*printk(KERN_ERR "FREQ CALC.: CPU[%u], load[%d], target freq[%u], cur freq[%u], min freq[%u], max_freq[%u]\n",cpu, cur_load, next_freq, cpu_policy->cur, cpu_policy->min, max_freq);*/
-		if (next_freq != cpu_policy->cur && cpu_online(cpu)) {
+		/*printk(KERN_ERR "FREQ CALC.: CPU[%u], load[%d], target freq[%u], cur freq[%u], min freq[%u], max_freq[%u]\n",cpu, cur_load, next_freq, cur_freq, cpu_policy->min, max_freq);*/
+		if (next_freq != cur_freq && cpu_online(cpu)) {
 			__cpufreq_driver_target(cpu_policy, next_freq, CPUFREQ_RELATION_L);
 		}
 	}
@@ -755,6 +758,7 @@ static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,
 				unsigned int event)
 {
 	unsigned int cpu;
+	unsigned int cur_freq;
 	struct cpufreq_nightmare_cpuinfo *this_nightmare_cpuinfo;
 	int rc, delay;
 
@@ -834,10 +838,11 @@ static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,
 
 	case CPUFREQ_GOV_LIMITS:
 		mutex_lock(&this_nightmare_cpuinfo->timer_mutex);
-		if (policy->max < this_nightmare_cpuinfo->cur_policy->cur)
+		cur_freq = acpuclk_get_rate(cpu);
+		if (policy->max < cur_freq)
 			__cpufreq_driver_target(this_nightmare_cpuinfo->cur_policy,
 				policy->max, CPUFREQ_RELATION_H);
-		else if (policy->min > this_nightmare_cpuinfo->cur_policy->cur)
+		else if (policy->min > cur_freq)
 			__cpufreq_driver_target(this_nightmare_cpuinfo->cur_policy,
 				policy->min, CPUFREQ_RELATION_L);
 		mutex_unlock(&this_nightmare_cpuinfo->timer_mutex);
