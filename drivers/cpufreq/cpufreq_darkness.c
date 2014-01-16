@@ -29,7 +29,6 @@
 #include <linux/ktime.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
-#include "../../arch/arm/mach-msm/acpuclock.h"
 /*
  * dbs is used in this file as a shortform for demandbased switching
  * It helps to keep variable names smaller, simpler
@@ -383,7 +382,6 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 	struct cpufreq_policy *cpu_policy;
 	unsigned int min_freq;
 	unsigned int max_freq;
-	unsigned int cur_freq;
 #ifdef CONFIG_CPU_EXYNOS4210
 	int up_sf_step;
 	int down_sf_step;
@@ -433,15 +431,14 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 			min_freq = cpu_policy->min;*/
 		min_freq = cpu_policy->min;
 		max_freq = cpu_policy->max;
-		cur_freq = acpuclk_get_rate(cpu);
 		/* CPUs Online Scale Frequency*/
 #ifdef CONFIG_CPU_EXYNOS4210
 		tmp_freq = max(min(cur_load * (max_freq / 100), max_freq), min_freq);
 		if (force_freq_steps == 0) {
 			next_freq = (tmp_freq / 100000) * 100000;
-			if ((next_freq > cur_freq
+			if ((next_freq > cpu_policy->cur
 				&& (tmp_freq % 100000 > up_sf_step * 1000))
-				|| (next_freq < cur_freq
+				|| (next_freq < cpu_policy->cur
 				&& (tmp_freq % 100000 > down_sf_step * 1000))) {
 					next_freq += 100000;
 			}
@@ -457,7 +454,7 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 		next_freq = max(min(cur_load * (max_freq / 100), max_freq), min_freq);
 		cpufreq_frequency_table_target(cpu_policy, this_darkness_cpuinfo->freq_table, next_freq,
 			CPUFREQ_RELATION_H, &index);
-		if (this_darkness_cpuinfo->freq_table[index].frequency != cur_freq) {
+		if (this_darkness_cpuinfo->freq_table[index].frequency != cpu_policy->cur) {
 			cpufreq_frequency_table_target(cpu_policy, this_darkness_cpuinfo->freq_table, next_freq,
 				CPUFREQ_RELATION_L, &index);
 		/* } else {
@@ -466,8 +463,8 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 		
 		next_freq = this_darkness_cpuinfo->freq_table[index].frequency;
 #endif
-		/*printk(KERN_ERR "FREQ CALC.: CPU[%u], load[%d], target freq[%u], cur freq[%u], min freq[%u], max_freq[%u]\n",cpu, cur_load, next_freq, cur_freq, cpu_policy->min, max_freq);*/
-		if (next_freq != cur_freq && cpu_online(cpu)) {
+		/*printk(KERN_ERR "FREQ CALC.: CPU[%u], load[%d], target freq[%u], cur freq[%u], min freq[%u], max_freq[%u]\n",cpu, cur_load, next_freq, cpu_policy->cur, cpu_policy->min, max_freq);*/
+		if (next_freq != cpu_policy->cur && cpu_online(cpu)) {
 			__cpufreq_driver_target(cpu_policy, next_freq, CPUFREQ_RELATION_L);
 		}
 	}
@@ -505,7 +502,6 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 				unsigned int event)
 {
 	unsigned int cpu;
-	unsigned int cur_freq;
 	struct cpufreq_darkness_cpuinfo *this_darkness_cpuinfo;
 	int rc, delay;
 
@@ -585,11 +581,10 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 
 	case CPUFREQ_GOV_LIMITS:
 		mutex_lock(&this_darkness_cpuinfo->timer_mutex);
-		cur_freq = acpuclk_get_rate(cpu);
-		if (policy->max < cur_freq)
+		if (policy->max < this_darkness_cpuinfo->cur_policy->cur)
 			__cpufreq_driver_target(this_darkness_cpuinfo->cur_policy,
 				policy->max, CPUFREQ_RELATION_H);
-		else if (policy->min > cur_freq)
+		else if (policy->min > this_darkness_cpuinfo->cur_policy->cur)
 			__cpufreq_driver_target(this_darkness_cpuinfo->cur_policy,
 				policy->min, CPUFREQ_RELATION_L);
 		mutex_unlock(&this_darkness_cpuinfo->timer_mutex);
