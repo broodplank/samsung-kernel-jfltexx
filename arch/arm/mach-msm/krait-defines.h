@@ -16,7 +16,7 @@
  */
 #ifdef CONFIG_LOW_CPUCLOCKS
 #define FREQ_TABLE_SIZE		(39)
-#define KD_DCVS_MAX_NUM_FREQS	(19)
+#define KD_DCVS_MAX_NUM_FREQS	(17)
 #else
 #define FREQ_TABLE_SIZE		(35)
 #define KD_DCVS_MAX_NUM_FREQS	(15)
