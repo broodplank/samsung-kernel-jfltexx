@@ -1900,7 +1900,7 @@ __acquires(&gcwq->lock)
 	lock_map_acquire_read(&cwq->wq->lockdep_map);
 	lock_map_acquire(&lockdep_map);
 	trace_workqueue_execute_start(work);
-	worker->current_func(work);	
+	worker->current_func(work);
 #ifdef CONFIG_SEC_DEBUG
 	//secdbg_sched_msg("@%pS", f);
 #endif
@@ -3911,5 +3911,3 @@ static int __init init_workqueues(void)
 	return 0;
 }
 early_initcall(init_workqueues);
-
-
