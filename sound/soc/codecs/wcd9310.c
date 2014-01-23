@@ -8793,7 +8793,6 @@ static int tabla_codec_probe(struct snd_soc_codec *codec)
 	control = codec->control_data;
 
 	tabla = kzalloc(sizeof(struct tabla_priv), GFP_KERNEL);
-
 	if (!tabla) {
 		dev_err(codec->dev, "Failed to allocate private data\n");
 		return -ENOMEM;
