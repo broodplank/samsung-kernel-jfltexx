@@ -197,9 +197,13 @@ static ssize_t power_ro_lock_show(struct device *dev,
 {
 	int ret;
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
-	struct mmc_card *card = md->queue.card;
+	struct mmc_card *card;
 	int locked = 0;
 
+	if (!md)
+		return -EINVAL;
+
+	card = md->queue.card;
 	if (card->ext_csd.boot_ro_lock & EXT_CSD_BOOT_WP_B_PERM_WP_EN)
 		locked = 2;
 	else if (card->ext_csd.boot_ro_lock & EXT_CSD_BOOT_WP_B_PWR_WP_EN)
@@ -225,6 +229,8 @@ static ssize_t power_ro_lock_store(struct device *dev,
 		return count;
 
 	md = mmc_blk_get(dev_to_disk(dev));
+	if (!md)
+		return -EINVAL;
 	card = md->queue.card;
 
 	mmc_claim_host(card->host);
@@ -262,6 +268,9 @@ static ssize_t force_ro_show(struct device *dev, struct device_attribute *attr,
 	int ret;
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
 
+	if (!md)
+		return -EINVAL;
+
 	ret = snprintf(buf, PAGE_SIZE, "%d",
 		       get_disk_ro(dev_to_disk(dev)) ^
 		       md->read_only);
@@ -276,6 +285,10 @@ static ssize_t force_ro_store(struct device *dev, struct device_attribute *attr,
 	char *end;
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
 	unsigned long set = simple_strtoul(buf, &end, 0);
+
+	if (!md)
+		return -EINVAL;
+
 	if (end == buf) {
 		ret = -EINVAL;
 		goto out;
@@ -296,6 +309,8 @@ num_wr_reqs_to_start_packing_show(struct device *dev,
 	int num_wr_reqs_to_start_packing;
 	int ret;
 
+	if (!md)
+		return -EINVAL;
 	num_wr_reqs_to_start_packing = md->queue.num_wr_reqs_to_start_packing;
 
 	ret = snprintf(buf, PAGE_SIZE, "%d\n", num_wr_reqs_to_start_packing);
@@ -312,6 +327,9 @@ num_wr_reqs_to_start_packing_store(struct device *dev,
 	int value;
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
 
+	if (!md)
+		return -EINVAL;
+
 	sscanf(buf, "%d", &value);
 	if (value >= 0)
 		md->queue.num_wr_reqs_to_start_packing = value;
@@ -326,18 +344,24 @@ min_sectors_to_check_bkops_status_show(struct device *dev,
 {
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
 	unsigned int min_sectors_to_check_bkops_status;
-	struct mmc_card *card = md->queue.card;
+	struct mmc_card *card;
 	int ret;
 
-	if (!card)
+	if (!md)
 		return -EINVAL;
 
+	card = md->queue.card;
+	if (!card) {
+		ret = -EINVAL;
+		goto exit;
+	}
 	min_sectors_to_check_bkops_status =
 		card->bkops_info.min_sectors_to_queue_delayed_work;
 
 	ret = snprintf(buf, PAGE_SIZE, "%d\n",
 		       min_sectors_to_check_bkops_status);
 
+exit:
 	mmc_blk_put(md);
 	return ret;
 }
@@ -349,10 +373,16 @@ min_sectors_to_check_bkops_status_store(struct device *dev,
 {
 	int value;
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
-	struct mmc_card *card = md->queue.card;
+	struct mmc_card *card;
 
-	if (!card)
+	if (!md)
 		return -EINVAL;
+
+	card = md->queue.card;
+	if (!card) {
+		mmc_blk_put(md);
+		return -EINVAL;
+	}
 
 	sscanf(buf, "%d", &value);
 	if (value >= 0)
@@ -369,6 +399,8 @@ no_pack_for_random_show(struct device *dev,
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
 	int ret;
 
+	if (!md)
+		return -EINVAL;
 	ret = snprintf(buf, PAGE_SIZE, "%d\n", md->queue.no_pack_for_random);
 
 	mmc_blk_put(md);
@@ -382,9 +414,13 @@ no_pack_for_random_store(struct device *dev,
 {
 	int value;
 	struct mmc_blk_data *md = mmc_blk_get(dev_to_disk(dev));
-	struct mmc_card *card = md->queue.card;
+	struct mmc_card *card;
 	int ret = count;
 
+	if (!md)
+		return -EINVAL;
+
+	card = md->queue.card;
 	if (!card) {
 		ret = -EINVAL;
 		goto exit;
@@ -683,7 +719,7 @@ static int mmc_blk_ioctl(struct block_device *bdev, fmode_t mode,
 {
 #if defined(CONFIG_MMC_CPRM)
 	struct mmc_blk_data *md = bdev->bd_disk->private_data;
-	struct mmc_card *card = md->queue.card;
+	struct mmc_card *card;
 
 	static int i;
 	static unsigned long temp_arg[16] = {0};
@@ -692,6 +728,14 @@ static int mmc_blk_ioctl(struct block_device *bdev, fmode_t mode,
 	if (cmd == MMC_IOC_CMD)
 		ret = mmc_blk_ioctl_cmd(bdev, (struct mmc_ioc_cmd __user *)arg);
 #if defined(CONFIG_MMC_CPRM)
+	if (!md)
+		return -EINVAL;
+
+	card = md->queue.card;
+	if (!card) {
+		mmc_blk_put(md);
+		return -EINVAL;
+	}
 	printk(KERN_DEBUG " %s ], %x ", __func__, cmd);
 
 	switch (cmd) {
