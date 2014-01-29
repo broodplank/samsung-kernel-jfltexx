@@ -43,9 +43,6 @@
 #include "mdm_private.h"
 #include "sysmon.h"
 #include <mach/diag_bridge.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
 
 #define MDM_MODEM_TIMEOUT	6000
 #define MDM_MODEM_DELTA	100
@@ -223,29 +220,6 @@ static void mdm_update_gpio_configs(enum gpio_update_config gpio_config)
 	}
 }
 
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
-static unsigned char *mdm_read_err_report(void)
-{
-	/* Read CP error report from mdm_err.log in tombstones */
-	static unsigned char buf[1000] = { 0, };
-	struct file *filp;
-	mm_segment_t old_fs = get_fs();
-	set_fs(KERNEL_DS);
-	do {
-		filp =filp_open("/tombstones/mdm/mdm_err.log", \
-			O_RDWR, S_IRUSR|S_IWUSR);
-		if (IS_ERR(filp)) {
-			set_fs(old_fs);
-			return (unsigned char *) buf;
-		}
-		vfs_read(filp, buf, 1000, &filp->f_pos);
-		filp_close(filp, NULL);
-		set_fs(old_fs);
-	} while (0);
-	return (unsigned char *) buf;
-}
-#endif
-
 long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 				unsigned long arg)
 {
@@ -303,12 +277,6 @@ long mdm_modem_ioctl(struct file *filp, unsigned int cmd,
 		else {
 			pr_info("%s: ramdump collection completed\n", __func__);
 			mdm_drv->mdm_ram_dump_status = 0;
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
-			if (sec_debug_is_enabled()) {
-				sec_set_mdm_subsys_info(mdm_read_err_report());
-				panic("external_modem %s", mdm_read_err_report());
-			}
-#endif
 		}
 		complete(&mdm_ram_dumps);
 		break;

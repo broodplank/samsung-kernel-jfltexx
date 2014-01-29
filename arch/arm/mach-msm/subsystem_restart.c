@@ -34,9 +34,6 @@
 #include <mach/socinfo.h>
 #include <mach/subsystem_notif.h>
 #include <mach/subsystem_restart.h>
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
 
 #include "smd_private.h"
 
@@ -441,11 +438,6 @@ int subsystem_restart_dev(struct subsys_device *dev)
 		name, restart_level);
 
 	switch (restart_level) {
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
-	case RESET_SUBSYS_INDEPENDENT_SOC:
-		enable_ramdumps = sec_debug_is_enabled()? 1 : 0;
-		/* Fall through */
-#endif
 	case RESET_SUBSYS_COUPLED:
 	case RESET_SUBSYS_INDEPENDENT:
 		__subsystem_restart_dev(dev);
@@ -453,13 +445,8 @@ int subsystem_restart_dev(struct subsys_device *dev)
 	case RESET_SOC:
 		WARN(1, "subsys-restart: Resetting the SoC - %s crashed.", name);
 /* It should be used for APQ model to distingush AP side or MDM side */
-#ifdef CONFIG_SEC_DEBUG
-		panic("%s crashed: subsys-restart: Resetting the SoC",
-			name);
-#else
 		panic("subsys-restart: Resetting the SoC - %s crashed.",
 			name);
-#endif
 		break;
 	default:
 		pr_err("subsys-restart: Unknown restart level!\n");
@@ -579,9 +566,6 @@ static int __init ssr_init_soc_restart_orders(void)
 
 static int __init subsys_restart_init(void)
 {
-#ifdef CONFIG_SEC_DEBUG_MDM_FILE_INFO
-	restart_level = RESET_SUBSYS_INDEPENDENT_SOC;
-#endif
 	ssr_wq = alloc_workqueue("ssr_wq", 0, 0);
 	if (!ssr_wq) {
 		pr_err("%s: out of memory\n", __func__);

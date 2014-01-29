@@ -17,10 +17,6 @@
 #include <asm/uaccess.h>
 #include <asm/io.h>
 
-#ifdef CONFIG_SEC_DEBUG
-#include <mach/sec_debug.h>
-#endif
-
 #define LOG_MAGIC 0x4d474f4c	/* "LOGM" */
 
 static unsigned *sec_avc_log_ptr;
@@ -31,13 +27,6 @@ int __init sec_avc_log_init(void)
 {
 	unsigned size = SZ_256K;
 	unsigned *sec_avc_log_mag;
-
-#ifdef CONFIG_SEC_DEBUG
-	if (kernel_sec_get_debug_level() == KERNEL_SEC_DEBUG_LEVEL_LOW) {
-		pr_info("AVC_MSG:debug level is low.\n");
-		return 1;
-	}
-#endif
 
 	sec_avc_log_size = size + 8;
 	sec_avc_log_mag = alloc_bootmem(sec_avc_log_size);
