@@ -182,7 +182,7 @@ out_unlock:
  */
 static struct inode *
 ecryptfs_do_create(struct inode *directory_inode,
-		struct dentry *ecryptfs_dentry, umode_t mode)
+		   struct dentry *ecryptfs_dentry, umode_t mode)
 {
 	int rc;
 	struct dentry *lower_dentry;
@@ -296,7 +296,7 @@ out:
  * Returns zero on success
  */
 int ecryptfs_initialize_file(struct dentry *ecryptfs_dentry,
-				    struct inode *ecryptfs_inode)
+			     struct inode *ecryptfs_inode)
 {
 	struct ecryptfs_crypt_stat *crypt_stat =
 		&ecryptfs_inode_to_private(ecryptfs_inode)->crypt_stat;

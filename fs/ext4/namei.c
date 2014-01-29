@@ -860,7 +860,7 @@ static inline int search_dirblock(struct buffer_head *bh,
 		}
 #else
 		if ((char *) de + namelen <= dlimit &&
-			ext4_match (namelen, name, de)) {
+		    ext4_match (namelen, name, de)) {
 			/* found a match - just to be sure, do a full check */
 			if (ext4_check_dir_entry(dir, NULL, de, bh, offset))
 				return -1;

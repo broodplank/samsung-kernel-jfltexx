@@ -4651,7 +4651,6 @@ do_more:
 	retry:
 		new_entry = kmem_cache_alloc(ext4_free_data_cachep, GFP_NOFS);
 		if (!new_entry) {
-
 			/*
 			 * We use a retry loop because
 			 * ext4_free_blocks() is not allowed to fail.
