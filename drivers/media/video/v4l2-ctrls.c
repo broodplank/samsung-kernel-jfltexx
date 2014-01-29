@@ -445,6 +445,7 @@ const char * const *v4l2_ctrl_get_menu(u32 id)
 		return mpeg4_profile;
 	case V4L2_CID_JPEG_CHROMA_SUBSAMPLING:
 		return jpeg_chroma_subsampling;
+
 	case V4L2_CID_MPEG_VIDC_VIDEO_INTRA_REFRESH_MODE:
 		return mpeg_video_intra_refresh_mode;
 	default:
@@ -775,7 +776,7 @@ void v4l2_ctrl_fill(u32 id, const char **name, enum v4l2_ctrl_type *type,
 	case V4L2_CID_MPEG_VIDEO_H264_B_FRAME_QP:
 	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_BYTES:
 	case V4L2_CID_MPEG_VIDEO_MULTI_SLICE_MAX_MB:
-	*type = V4L2_CTRL_TYPE_INTEGER;
+		*type = V4L2_CTRL_TYPE_INTEGER;
 		*step = 1;
 		*min = 0;
 		/* Max is calculated as RGB888 that is 2^24 */
