@@ -286,12 +286,6 @@ void msm_restart(char mode, const char *cmd)
 		set_dload_mode(0);
 #endif
 
-#ifdef CONFIG_MSM_DLOAD_MODE
-	set_dload_mode(0);
-	set_dload_mode(in_panic);
-	if (restart_mode == RESTART_DLOAD)
-		set_dload_mode(1);
-#endif
 	printk(KERN_NOTICE "Going down for restart now\n");
 
 	pm8xxx_reset_pwr_off(1);
