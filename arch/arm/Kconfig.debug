@@ -301,15 +301,6 @@ config ARM_KPROBES_TEST
 	  Perform tests of kprobes API and instruction set simulation.
 
 comment "Samsung Debugging Feature"
-menuconfig SEC_DEBUG
-	bool "Samsung TN Ramdump Feature"
-	default n
-	help
-	  Samsung TN Ramdump Feature.
-	  Enables collection of ram dump.
-	  Enables task history, debug level etc.
-	  This feature is enabled in defconfig.
-
 config PID_IN_CONTEXTIDR
 	bool "Write the current PID to the CONTEXTIDR register"
 	depends on CPU_COPY_V6
