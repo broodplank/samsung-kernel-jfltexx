@@ -214,8 +214,9 @@ static long madvise_remove(struct vm_area_struct *vma,
 
 	f = vma->vm_file;
 
-	if (!f || !f->f_mapping || !f->f_mapping->host)
+	if (!f || !f->f_mapping || !f->f_mapping->host) {
 			return -EINVAL;
+	}
 
 	if ((vma->vm_flags & (VM_SHARED|VM_WRITE)) != (VM_SHARED|VM_WRITE))
 		return -EACCES;
