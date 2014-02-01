@@ -1155,6 +1155,7 @@ static int ehci_hub_control (
 			if ((temp & PORT_PE) == 0
 					|| (temp & PORT_RESET) != 0)
 				goto error;
+
 			/*port gets suspended as part of bus suspend routine*/
 			if (!ehci->susp_sof_bug)
 				ehci_writel(ehci, temp | PORT_SUSPEND,
@@ -1300,6 +1301,7 @@ static int ehci_hub_control (
 			else
 				goto error;
 			break;
+
 		default:
 			goto error;
 		}

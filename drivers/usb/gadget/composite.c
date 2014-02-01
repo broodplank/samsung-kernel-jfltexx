@@ -181,13 +181,13 @@ ep_found:
 	_ep->comp_desc = comp_desc;
 	if (g->speed == USB_SPEED_SUPER) {
 		switch (usb_endpoint_type(_ep->desc)) {
-		case USB_ENDPOINT_XFER_BULK:
-		case USB_ENDPOINT_XFER_INT:
-			_ep->maxburst = comp_desc->bMaxBurst;
-			break;
 		case USB_ENDPOINT_XFER_ISOC:
 			/* mult: bits 1:0 of bmAttributes */
 			_ep->mult = comp_desc->bmAttributes & 0x3;
+			break;
+		case USB_ENDPOINT_XFER_BULK:
+		case USB_ENDPOINT_XFER_INT:
+			_ep->maxburst = comp_desc->bMaxBurst;
 			break;
 		default:
 			/* Do nothing for control endpoints */
@@ -428,6 +428,7 @@ static int config_buf(struct usb_configuration *config,
 		len -= status;
 		next += status;
 	}
+
 #ifdef CONFIG_USB_ANDROID_SAMSUNG_COMPOSITE
 	set_interface_count(config, c);
 #endif
@@ -726,7 +727,6 @@ static int set_config(struct usb_composite_dev *cdev,
 	power = c->bMaxPower ? (2 * c->bMaxPower) : CONFIG_USB_GADGET_VBUS_DRAW;
 done:
 	usb_gadget_vbus_draw(gadget, power);
-
 	if (result >= 0 && cdev->delayed_status)
 		result = USB_GADGET_DELAYED_STATUS;
 	return result;

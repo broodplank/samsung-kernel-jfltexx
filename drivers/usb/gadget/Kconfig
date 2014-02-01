@@ -123,7 +123,13 @@ config USB_GADGET_STORAGE_NUM_BUFFERS
 #   - discrete ones (including all PCI-only controllers)
 #   - debug/dummy gadget+hcd is last.
 #
-menu "USB Peripheral Controller"
+choice
+	prompt "USB Peripheral Controller"
+	help
+	   A USB device uses a controller to talk to its host.
+	   Systems should have only one such upstream link.
+	   Many controller drivers are platform-specific; these
+	   often need board-specific hooks.
 
 #
 # Integrated controllers
@@ -568,7 +574,7 @@ config USB_DUMMY_HCD
 # NOTE:  Please keep dummy_hcd LAST so that "real hardware" appears
 # first and will be selected by default.
 
-endmenu
+endchoice
 
 # Selected by UDC drivers that support high-speed operation.
 config USB_GADGET_DUALSPEED

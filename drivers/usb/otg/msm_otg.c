@@ -219,7 +219,7 @@ static int msm_hsusb_config_vddcx(int high)
 		return ret;
 	}
 
-	pr_info("KTFAST_CHARGE-%s: min_vol:%d max_vol:%d\n", __func__, min_vol, max_vol);
+	pr_info("FAST_CHARGE-%s: min_vol:%d max_vol:%d\n", __func__, min_vol, max_vol);
 
 	return ret;
 }

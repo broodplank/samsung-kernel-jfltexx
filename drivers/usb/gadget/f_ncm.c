@@ -1359,10 +1359,7 @@ int ncm_bind_config(struct usb_configuration *c, u8 ethaddr[ETH_ALEN])
 	ncm = kzalloc(sizeof *ncm, GFP_KERNEL);
 	if (!ncm)
 		return -ENOMEM;
-	printk(KERN_DEBUG "usb: %s before MAC:%02X:%02X:%02X:%02X:%02X:%02X\n",
-			__func__, ethaddr[0], ethaddr[1],
-			ethaddr[2], ethaddr[3], ethaddr[4],
-			ethaddr[5]);
+
 	/* export host's Ethernet address in CDC format */
 	snprintf(ncm->ethaddr, sizeof ncm->ethaddr,
 		"%02X%02X%02X%02X%02X%02X",
