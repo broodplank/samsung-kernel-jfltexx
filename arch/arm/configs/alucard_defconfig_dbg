@@ -3656,11 +3656,6 @@ CONFIG_DEBUG_USER=y
 CONFIG_PID_IN_CONTEXTIDR=y
 
 #
-# Samsung Rooting Restriction Feature
-#
-# CONFIG_SEC_RESTRICT_ROOTING is not set
-
-#
 # Security options
 #
 CONFIG_KEYS=y
