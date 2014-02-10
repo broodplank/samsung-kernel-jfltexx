@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.4.77 Kernel Configuration
+# Linux/arm 3.4.79 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -50,8 +50,8 @@ CONFIG_HAVE_KERNEL_LZMA=y
 CONFIG_HAVE_KERNEL_XZ=y
 CONFIG_HAVE_KERNEL_LZO=y
 # CONFIG_KERNEL_GZIP is not set
-CONFIG_KERNEL_LZMA=y
-# CONFIG_KERNEL_XZ is not set
+# CONFIG_KERNEL_LZMA is not set
+CONFIG_KERNEL_XZ=y
 # CONFIG_KERNEL_LZO is not set
 CONFIG_DEFAULT_HOSTNAME="(none)"
 CONFIG_SWAP=y
@@ -2929,10 +2929,6 @@ CONFIG_USB_GADGET=y
 # CONFIG_USB_GADGET_DEBUG_FS is not set
 CONFIG_USB_GADGET_VBUS_DRAW=500
 CONFIG_USB_GADGET_STORAGE_NUM_BUFFERS=2
-
-#
-# USB Peripheral Controller
-#
 # CONFIG_USB_FUSB300 is not set
 # CONFIG_USB_R8A66597 is not set
 # CONFIG_USB_MV_UDC is not set
