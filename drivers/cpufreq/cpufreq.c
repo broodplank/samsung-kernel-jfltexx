@@ -527,6 +527,22 @@ static ssize_t store_scaling_max_freq_all_cpus(struct cpufreq_policy *policy, co
 	return count;
 }
 
+void set_scaling_max_gps_freq(unsigned int max_freq)
+{
+	struct cpufreq_policy *main_policy;
+	char buf[10];
+	int slength = 0;
+	ssize_t count;
+
+	slength = sprintf(buf, "%u", max_freq);
+	if (slength > 0) {
+		main_policy = per_cpu(cpufreq_cpu_data, 0);
+		if (!main_policy)
+			return -EINVAL;
+		store_scaling_max_freq_all_cpus(main_policy, buf, count);
+	}	
+}
+
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
  */
