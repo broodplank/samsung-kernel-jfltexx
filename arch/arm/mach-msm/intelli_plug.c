@@ -52,8 +52,8 @@ module_param(intelli_plug_active, uint, 0644);
 static unsigned int eco_mode_active = 0;
 module_param(eco_mode_active, uint, 0644);
 
-static unsigned int eco_cores_enabled = 2;
-module_param(eco_cores_enabled, uint, 0644);
+static unsigned int strict_mode_active = 0;
+module_param(strict_mode_active, uint, 0644);
 
 static unsigned int sampling_time = 0;
 
@@ -71,17 +71,12 @@ static unsigned int nr_run_thresholds_full[] = {
 	5,  7,  9,  UINT_MAX /* avg run threads * 2 (e.g., 9 = 2.25 threads) */
 	};
 
-static unsigned int nr_run_thresholds_eco_minimal[] = {
-/*      1,  2, - on-line cpus target */
-        3,  5,  UINT_MAX /* avg run threads * 2 (e.g., 9 = 2.25 threads) */
-        };
-
 static unsigned int nr_run_thresholds_eco[] = {
 /*      1,  2, - on-line cpus target */
         3,  UINT_MAX /* avg run threads * 2 (e.g., 9 = 2.25 threads) */
         };
 
-static unsigned int nr_run_thresholds_eco_extreme[] = {
+static unsigned int nr_run_thresholds_strict[] = {
 /*	   1, - on-line cpus target */
 	UINT_MAX /* avg run threads *2 (e.g., 9 = 2.25 threads) */
 	};
@@ -155,21 +150,12 @@ static unsigned int calculate_thread_stats(void)
 #endif
 	}
 
-	if (eco_cores_enabled == 3) {
-		threshold_size =  ARRAY_SIZE(nr_run_thresholds_eco_minimal);
-                nr_run_hysteresis = 6;
-                nr_fshift = 2;
-#ifdef DEBUG_INTELLI_PLUG
-                pr_info("intelliplug: eco-minimal mode active!");
-#endif
-        }
-
-	if (eco_cores_enabled == 1) {
-		threshold_size =  ARRAY_SIZE(nr_run_thresholds_eco_extreme);
+	if (strict_mode_active == 1) {
+		threshold_size =  ARRAY_SIZE(nr_run_thresholds_strict);
                 nr_run_hysteresis = 2;
                 nr_fshift = 1;
 #ifdef DEBUG_INTELLI_PLUG
-                pr_info("intelliplug: eco-extreme mode active!");
+                pr_info("intelliplug: strict mode active!");
 #endif
         }
 
@@ -186,10 +172,8 @@ static unsigned int calculate_thread_stats(void)
 		unsigned int nr_threshold;
 		if (!eco_mode_active)
 			nr_threshold = nr_run_thresholds_full[nr_run - 1];
-		if (eco_cores_enabled == 3)
-			nr_threshold = nr_run_thresholds_eco_minimal[nr_run - 1];
-		if (eco_cores_enabled == 1)
-			nr_threshold = nr_run_thresholds_eco_extreme[nr_run - 1];
+		if (strict_mode_active == 1)
+			nr_threshold = nr_run_thresholds_strict[nr_run - 1];
 		else
 			nr_threshold = nr_run_thresholds_eco[nr_run - 1];
 
@@ -221,7 +205,7 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 		// detect artificial loads or constant loads
 		// using msm rqstats
 		nr_cpus = num_online_cpus();
-		if (!eco_mode_active && (nr_cpus >= 1 && nr_cpus < 4)) {
+		if (!eco_mode_active && !strict_mode_active && (nr_cpus >= 1 && nr_cpus < 4)) {
 			decision = mp_decision();
 			if (decision) {
 				switch (nr_cpus) {
@@ -354,6 +338,8 @@ static void __cpuinit intelli_plug_late_resume(struct early_suspend *handler)
 	/* wake up everyone */
 	if (eco_mode_active)
 		num_of_active_cores = 2;
+	if (strict_mode_active)
+		num_of_active_cores = 1;
 	else
 		num_of_active_cores = 4;
 
