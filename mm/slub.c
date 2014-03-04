@@ -3919,6 +3919,7 @@ struct kmem_cache *__kmem_cache_create(const char *name, size_t size,
 	struct kmem_cache *s;
 	char *n;
 
+	mutex_lock(&slab_mutex);
 	s = find_mergeable(size, align, flags, name, ctor);
 	if (s) {
 		s->refcount++;
@@ -3931,35 +3932,37 @@ struct kmem_cache *__kmem_cache_create(const char *name, size_t size,
 
 		if (sysfs_slab_alias(s, name)) {
 			s->refcount--;
-			return NULL;
+			goto err;
 		}
+		mutex_unlock(&slab_mutex);
 		return s;
 	}
 
 	n = kstrdup(name, GFP_KERNEL);
 	if (!n)
-		return NULL;
+		goto err;
 
 	s = kmalloc(kmem_size, GFP_KERNEL);
 	if (s) {
 		if (kmem_cache_open(s, n,
 				size, align, flags, ctor)) {
-			int r;
 			list_add(&s->list, &slab_caches);
 			mutex_unlock(&slab_mutex);
-			r = sysfs_slab_add(s);
-			mutex_lock(&slab_mutex);
-
-			if (!r)
-				return s;
-
-			list_del(&s->list);
-			kmem_cache_close(s);
+			if (sysfs_slab_add(s)) {
+				mutex_lock(&slab_mutex);
+				list_del(&s->list);
+				kfree(n);
+				kfree(s);
+				goto err;
+			}
+			return s;
 		}
 		kfree(n);
 		kfree(s);
 	}
-	return NULL;
+err:
+	mutex_unlock(&slab_mutex);
+	return s;
 }
 
 #ifdef CONFIG_SMP
