@@ -489,6 +489,16 @@ EXPORT_SYMBOL(slab_buffer_size);
 static int slab_max_order = SLAB_MAX_ORDER_LO;
 static bool slab_max_order_set __initdata;
 
+/*
+ * Functions for storing/retrieving the cachep and or slab from the page
+ * allocator.  These are used to find the slab an obj belongs to.  With kfree(),
+ * these are used to find the cache which an obj belongs to.
+ */
+static inline void page_set_cache(struct page *page, struct kmem_cache *cache)
+{
+	page->slab_cache = cache;
+}
+
 static inline struct kmem_cache *page_get_cache(struct page *page)
 {
 	page = compound_head(page);
@@ -496,18 +506,27 @@ static inline struct kmem_cache *page_get_cache(struct page *page)
 	return page->slab_cache;
 }
 
+static inline void page_set_slab(struct page *page, struct slab *slab)
+{
+	page->slab_page = slab;
+}
+
+static inline struct slab *page_get_slab(struct page *page)
+{
+	BUG_ON(!PageSlab(page));
+	return page->slab_page;
+}
+
 static inline struct kmem_cache *virt_to_cache(const void *obj)
 {
 	struct page *page = virt_to_head_page(obj);
-	return page->slab_cache;
+	return page_get_cache(page);
 }
 
 static inline struct slab *virt_to_slab(const void *obj)
 {
 	struct page *page = virt_to_head_page(obj);
-
-	VM_BUG_ON(!PageSlab(page));
-	return page->slab_page;
+	return page_get_slab(page);
 }
 
 static inline void *index_to_obj(struct kmem_cache *cache, struct slab *slab,
@@ -2899,8 +2918,8 @@ static void slab_map_pages(struct kmem_cache *cache, struct slab *slab,
 		nr_pages <<= cache->gfporder;
 
 	do {
-		page->slab_cache = cache;
-		page->slab_page = slab;
+		page_set_cache(page, cache);
+		page_set_slab(page, slab);
 		page++;
 	} while (--nr_pages);
 }
@@ -3038,7 +3057,7 @@ static void *cache_free_debugcheck(struct kmem_cache *cachep, void *objp,
 	kfree_debugcheck(objp);
 	page = virt_to_head_page(objp);
 
-	slabp = page->slab_page;
+	slabp = page_get_slab(page);
 
 	if (cachep->flags & SLAB_RED_ZONE) {
 		verify_redzone_free(cachep, objp);
@@ -3242,7 +3261,7 @@ static void *cache_alloc_debugcheck_after(struct kmem_cache *cachep,
 		struct slab *slabp;
 		unsigned objnr;
 
-		slabp = virt_to_head_page(objp)->slab_page;
+		slabp = page_get_slab(virt_to_head_page(objp));
 		objnr = (unsigned)(objp - slabp->s_mem) / cachep->buffer_size;
 		slab_bufctl(slabp)[objnr] = BUFCTL_ACTIVE;
 	}
