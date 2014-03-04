@@ -2282,11 +2282,11 @@ new_slab:
 	}
 
 	page = c->page;
-	if (likely(!kmem_cache_debug(s) && pfmemalloc_match(page, gfpflags)))
+	if (likely(!kmem_cache_debug(s)))
 		goto load_freelist;
 
 	/* Only entered in the debug case */
-	if (kmem_cache_debug(s) && !alloc_debug_processing(s, page, freelist, addr))
+	if (!alloc_debug_processing(s, page, freelist, addr))
 		goto new_slab;	/* Slab failed checks. Next slab needed */
 
 	deactivate_slab(s, page, get_freepointer(s, freelist));
@@ -2344,7 +2344,8 @@ redo:
 
 	object = c->freelist;
 	page = c->page;
-	if (unlikely(!object || !node_match(page, node)))
+	if (unlikely(!object || !node_match(page, node) ||
+					!pfmemalloc_match(page, gfpflags)))
 		object = __slab_alloc(s, gfpflags, node, addr, c);
 
 	else {
