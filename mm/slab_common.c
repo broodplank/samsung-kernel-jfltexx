@@ -100,6 +100,7 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size, size_t align
 {
 	struct kmem_cache *s = NULL;
 	int err = 0;
+	char *n;
 
 	get_online_cpus();
 	mutex_lock(&slab_mutex);
@@ -108,33 +109,32 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size, size_t align
 		goto out_locked;
 
 
+	n = kstrdup(name, GFP_KERNEL);
+	if (!n) {
+		err = -ENOMEM;
+		goto out_locked;
+	}
+
 	s = __kmem_cache_alias(name, size, align, flags, ctor);
 	if (s)
 		goto out_locked;
 
 	s = kmem_cache_zalloc(kmem_cache, GFP_KERNEL);
 	if (s) {
-		s->object_size = s->size = size;
-		s->align = align;
-		s->ctor = ctor;
-		s->name = kstrdup(name, GFP_KERNEL);
-		if (!s->name) {
-			kmem_cache_free(kmem_cache, s);
-			err = -ENOMEM;
-			goto out_locked;
-		}
-
-		err = __kmem_cache_create(s, flags);
+		err = __kmem_cache_create(s, n, size, align, flags, ctor);
 		if (!err)
 
 			list_add(&s->list, &slab_caches);
 
 		else {
-			kfree(s->name);
+			kfree(n);
 			kmem_cache_free(kmem_cache, s);
 		}
-	} else
+
+	} else {
+		kfree(n);
 		err = -ENOMEM;
+	}
 
 out_locked:
 	mutex_unlock(&slab_mutex);
