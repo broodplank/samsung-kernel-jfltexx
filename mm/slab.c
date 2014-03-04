@@ -3799,7 +3799,7 @@ void *kmem_cache_alloc_node_trace(struct kmem_cache *cachep,
 {
 	void *ret;
 
-	ret = slab_alloc_node(cachep, flags, nodeid, _RET_IP_);
+	ret = slab_alloc_node(cachep, flags, nodeid, _RET_IP);
 
 	trace_kmalloc_node(_RET_IP_, ret,
 			   size, cachep->size,
