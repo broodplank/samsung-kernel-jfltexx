@@ -168,7 +168,6 @@ void kmem_cache_destroy(struct kmem_cache *s)
 		list_del(&s->list);
 
 		if (!__kmem_cache_shutdown(s)) {
-			mutex_unlock(&slab_mutex);
 			if (s->flags & SLAB_DESTROY_BY_RCU)
 				rcu_barrier();
 
@@ -176,14 +175,12 @@ void kmem_cache_destroy(struct kmem_cache *s)
 			kmem_cache_free(kmem_cache, s);
 		} else {
 			list_add(&s->list, &slab_caches);
-			mutex_unlock(&slab_mutex);
 			printk(KERN_ERR "kmem_cache_destroy %s: Slab cache still has objects\n",
 				s->name);
 			dump_stack();
 		}
-	} else {
-		mutex_unlock(&slab_mutex);
 	}
+	mutex_unlock(&slab_mutex);
 	put_online_cpus();
 }
 EXPORT_SYMBOL(kmem_cache_destroy);
