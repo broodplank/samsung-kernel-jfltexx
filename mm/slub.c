@@ -2618,10 +2618,19 @@ redo:
 
 void kmem_cache_free(struct kmem_cache *s, void *x)
 {
-	s = cache_from_obj(s, x);
-	if (!s)
+	struct page *page;
+
+	page = virt_to_head_page(x);
+
+	if (kmem_cache_debug(s) && page->slab_cache != s) {
+		pr_err("kmem_cache_free: Wrong slab cache. %s but object"
+			" is from  %s\n", page->slab_cache->name, s->name);
+		WARN_ON_ONCE(1);
 		return;
-	slab_free(s, virt_to_head_page(x), x, _RET_IP_);
+	}
+
+	slab_free(s, page, x, _RET_IP_);
+
 	trace_kmem_cache_free(_RET_IP_, x);
 }
 EXPORT_SYMBOL(kmem_cache_free);

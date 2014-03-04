@@ -58,6 +58,7 @@
 
 #include <linux/kernel.h>
 #include <linux/slab.h>
+#include "slab.h"
 
 #include <linux/mm.h>
 #include <linux/swap.h> /* struct reclaim_state */
@@ -72,7 +73,6 @@
 
 #include <linux/atomic.h>
 
-#include "slab.h"
 /*
  * slob_block has a field 'units', which indicates size of block if +ve,
  * or offset of next block if -ve (in SLOB_UNITs).
