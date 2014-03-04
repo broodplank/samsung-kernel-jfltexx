@@ -2053,10 +2053,10 @@ static void flush_all(struct kmem_cache *s)
  * Check if the objects in a per cpu structure fit numa
  * locality expectations.
  */
-static inline int node_match(struct page *page, int node)
+static inline int node_match(struct kmem_cache_cpu *c, int node)
 {
 #ifdef CONFIG_NUMA
-	if (node != NUMA_NO_NODE && page_to_nid(page) != node)
+	if (node != NUMA_NO_NODE && page_to_nid(c->page) != node)
 		return 0;
 #endif
 	return 1;
@@ -2229,7 +2229,7 @@ static void *__slab_alloc(struct kmem_cache *s, gfp_t gfpflags, int node,
 		goto new_slab;
 redo:
 
-	if (unlikely(!node_match(page, node))) {
+	if (unlikely(!node_match(c, node))) {
 		stat(s, ALLOC_NODE_MISMATCH);
 		deactivate_slab(s, page, c->freelist);
 		c->page = NULL;
@@ -2316,7 +2316,6 @@ static __always_inline void *slab_alloc(struct kmem_cache *s,
 {
 	void **object;
 	struct kmem_cache_cpu *c;
-	struct page *page;
 	unsigned long tid;
 
 	if (slab_pre_alloc_hook(s, gfpflags))
@@ -2348,8 +2347,7 @@ redo:
 	preempt_enable();
 
 	object = c->freelist;
-	page = c->page;
-	if (unlikely(!object || !node_match(page, node)))
+	if (unlikely(!object || !node_match(c, node)))
 
 		object = __slab_alloc(s, gfpflags, node, addr, c);
 
