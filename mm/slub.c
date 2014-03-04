@@ -3213,12 +3213,12 @@ static inline int kmem_cache_close(struct kmem_cache *s)
 
 int __kmem_cache_shutdown(struct kmem_cache *s)
 {
-	int rc = kmem_cache_close(s);
+	return kmem_cache_close(s);
+}
 
-	if (!rc)
-		sysfs_slab_remove(s);
-
-	return rc;
+void __kmem_cache_destroy(struct kmem_cache *s)
+{
+	sysfs_slab_remove(s);
 }
 
 /********************************************************************
