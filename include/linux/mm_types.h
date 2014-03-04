@@ -128,7 +128,10 @@ struct page {
 		};
 
 		struct list_head list;	/* slobs list of pages */
-		struct slab *slab_page; /* slab fields */
+		struct {		/* slab fields */
+			struct kmem_cache *slab_cache;
+			struct slab *slab_page;
+		};
 	};
 
 	/* Remainder is not double word aligned */
@@ -143,7 +146,7 @@ struct page {
 #if USE_SPLIT_PTLOCKS
 		spinlock_t ptl;
 #endif
-		struct kmem_cache *slab_cache;	/* SL[AU]B: Pointer to slab */
+		struct kmem_cache *slab;	/* SLUB: Pointer to slab */
 		struct page *first_page;	/* Compound tail pages */
 	};
 
