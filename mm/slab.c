@@ -2290,8 +2290,11 @@ static int __init_refok setup_cpu_cache(struct kmem_cache *cachep, gfp_t gfp)
 
 /**
  * __kmem_cache_create - Create a cache.
- * @cachep: cache management descriptor
+ * @name: A string which is used in /proc/slabinfo to identify this cache.
+ * @size: The size of objects to be created in this cache.
+ * @align: The required alignment for the objects.
  * @flags: SLAB flags
+ * @ctor: A constructor for the objects.
  *
  * Returns a ptr to the cache on success, NULL on failure.
  * Cannot be called within a int, but can be interrupted.
