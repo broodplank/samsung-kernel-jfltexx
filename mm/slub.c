@@ -3042,6 +3042,7 @@ static int kmem_cache_open(struct kmem_cache *s,
 		size_t align, unsigned long flags,
 		void (*ctor)(void *))
 {
+	memset(s, 0, kmem_size);
 	s->name = name;
 	s->ctor = ctor;
 	s->object_size = size;
@@ -3116,7 +3117,7 @@ static int kmem_cache_open(struct kmem_cache *s,
 		goto error;
 
 	if (alloc_kmem_cache_cpus(s))
-		return 0;
+		return 1;
 
 	free_kmem_cache_nodes(s);
 error:
@@ -3125,7 +3126,7 @@ error:
 			"order=%u offset=%u flags=%lx\n",
 			s->name, (unsigned long)size, s->size, oo_order(s->oo),
 			s->offset, flags);
-	return -EINVAL;
+	return 0;
 }
 
 /*
@@ -3267,13 +3268,13 @@ static struct kmem_cache *__init create_kmalloc_cache(const char *name,
 {
 	struct kmem_cache *s;
 
-	s = kmem_cache_zalloc(kmem_cache, GFP_NOWAIT);
+	s = kmem_cache_alloc(kmem_cache, GFP_NOWAIT);
 
 	/*
 	 * This function is called with IRQs disabled during early-boot on
 	 * single CPU so there's no need to take slab_mutex here.
 	 */
-	if (kmem_cache_open(s, name, size, ARCH_KMALLOC_MINALIGN,
+	if (!kmem_cache_open(s, name, size, ARCH_KMALLOC_MINALIGN,
 								flags, NULL))
 		goto panic;
 
@@ -3951,11 +3952,20 @@ struct kmem_cache *__kmem_cache_alias(const char *name, size_t size,
 	return s;
 }
 
-int __kmem_cache_create(struct kmem_cache *s,
-		const char *name, size_t size,
+struct kmem_cache *__kmem_cache_create(const char *name, size_t size,
 		size_t align, unsigned long flags, void (*ctor)(void *))
 {
-	return kmem_cache_open(s, name, size, align, flags, ctor);
+	struct kmem_cache *s;
+
+	s = kmem_cache_alloc(kmem_cache, GFP_KERNEL);
+	if (s) {
+		if (kmem_cache_open(s, name,
+				size, align, flags, ctor)) {
+			return s;
+		}
+		kmem_cache_free(kmem_cache, s);
+	}
+	return NULL;
 }
 
 #ifdef CONFIG_SMP
