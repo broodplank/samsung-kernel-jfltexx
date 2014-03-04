@@ -112,10 +112,11 @@ void *kmem_cache_alloc(struct kmem_cache *, gfp_t);
 void *__kmalloc(size_t size, gfp_t flags);
 
 #ifdef CONFIG_TRACING
-extern void *kmem_cache_alloc_trace(struct kmem_cache *, gfp_t, size_t);
+extern void *kmem_cache_alloc_trace(size_t size,
+				    struct kmem_cache *cachep, gfp_t flags);
 #else
 static __always_inline void *
-kmem_cache_alloc_trace(struct kmem_cache *cachep, gfp_t flags, size_t size)
+kmem_cache_alloc_trace(size_t size, struct kmem_cache *cachep, gfp_t flags)
 {
 	return kmem_cache_alloc(cachep, flags);
 }
@@ -148,7 +149,7 @@ found:
 #endif
 			cachep = malloc_sizes[i].cs_cachep;
 
-		ret = kmem_cache_alloc_trace(cachep, flags, size);
+		ret = kmem_cache_alloc_trace(size, cachep, flags);
 
 		return ret;
 	}
