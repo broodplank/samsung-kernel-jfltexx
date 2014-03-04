@@ -97,7 +97,6 @@ struct kmem_cache *kmem_cache_create(const char *name, size_t size, size_t align
 #endif
 
 	s = __kmem_cache_create(name, size, align, flags, ctor);
-
 #ifdef CONFIG_DEBUG_VM
 oops:
 #endif
