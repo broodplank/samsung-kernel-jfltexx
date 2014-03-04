@@ -482,7 +482,7 @@ void *__kmalloc_track_caller(size_t size, gfp_t gfp, unsigned long caller)
 }
 
 #ifdef CONFIG_NUMA
-void *__kmalloc_node_track_caller(size_t size, gfp_t gfp,
+void *__kmalloc_node_track_caller(size_t size, gfp_t gfpflags,
 					int node, unsigned long caller)
 {
 	return __do_kmalloc_node(size, gfp, node, caller);
