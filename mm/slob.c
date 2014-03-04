@@ -92,6 +92,14 @@ struct slob_block {
 typedef struct slob_block slob_t;
 
 /*
+ * free_slob_page: call before a slob_page is returned to the page allocator.
+ */
+static inline void free_slob_page(struct page *sp)
+{
+	reset_page_mapcount(sp);
+}
+
+/*
  * All partially free slob pages go on these lists.
  */
 #define SLOB_BREAK1 256
@@ -99,6 +107,29 @@ typedef struct slob_block slob_t;
 static LIST_HEAD(free_slob_small);
 static LIST_HEAD(free_slob_medium);
 static LIST_HEAD(free_slob_large);
+
+/*
+ * is_slob_page: True for all slob pages (false for bigblock pages)
+ */
+static inline int is_slob_page(struct page *sp)
+{
+	return PageSlab(sp);
+}
+
+static inline void set_slob_page(struct page *sp)
+{
+	__SetPageSlab(sp);
+}
+
+static inline void clear_slob_page(struct page *sp)
+{
+	__ClearPageSlab(sp);
+}
+
+static inline struct page *slob_page(const void *addr)
+{
+	return virt_to_page(addr);
+}
 
 /*
  * slob_page_free: true for pages on free_slob_pages list.
@@ -316,8 +347,8 @@ static void *slob_alloc(size_t size, gfp_t gfp, int align, int node)
 		b = slob_new_pages(gfp & ~__GFP_ZERO, 0, node);
 		if (!b)
 			return NULL;
-		sp = virt_to_page(b);
-		__SetPageSlab(sp);
+		sp = slob_page(b);
+		set_slob_page(sp);
 
 		spin_lock_irqsave(&slob_lock, flags);
 		sp->units = SLOB_UNITS(PAGE_SIZE);
@@ -349,7 +380,7 @@ static void slob_free(void *block, int size)
 		return;
 	BUG_ON(!size);
 
-	sp = virt_to_page(block);
+	sp = slob_page(block);
 	units = SLOB_UNITS(size);
 
 	spin_lock_irqsave(&slob_lock, flags);
@@ -359,8 +390,8 @@ static void slob_free(void *block, int size)
 		if (slob_page_free(sp))
 			clear_slob_page_free(sp);
 		spin_unlock_irqrestore(&slob_lock, flags);
-		__ClearPageSlab(sp);
-		reset_page_mapcount(sp);
+		clear_slob_page(sp);
+		free_slob_page(sp);
 		slob_free_pages(b, 0);
 		return;
 	}
@@ -477,8 +508,8 @@ void kfree(const void *block)
 		return;
 	kmemleak_free(block);
 
-	sp = virt_to_page(block);
-	if (PageSlab(sp)) {
+	sp = slob_page(block);
+	if (is_slob_page(sp)) {
 		int align = max(ARCH_KMALLOC_MINALIGN, ARCH_SLAB_MINALIGN);
 		unsigned int *m = (unsigned int *)(block - align);
 		slob_free(m, *m + align);
@@ -496,8 +527,8 @@ size_t ksize(const void *block)
 	if (unlikely(block == ZERO_SIZE_PTR))
 		return 0;
 
-	sp = virt_to_page(block);
-	if (PageSlab(sp)) {
+	sp = slob_page(block);
+	if (is_slob_page(sp)) {
 		int align = max(ARCH_KMALLOC_MINALIGN, ARCH_SLAB_MINALIGN);
 		unsigned int *m = (unsigned int *)(block - align);
 		return SLOB_UNITS(*m) * SLOB_UNIT;
