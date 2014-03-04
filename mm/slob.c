@@ -59,8 +59,6 @@
 
 #include <linux/kernel.h>
 #include <linux/slab.h>
-#include "slab.h"
-
 #include <linux/mm.h>
 #include <linux/swap.h> /* struct reclaim_state */
 #include <linux/cache.h>
@@ -533,7 +531,6 @@ struct kmem_cache *__kmem_cache_create(const char *name, size_t size,
 			c->align = align;
 
 		kmemleak_alloc(c, sizeof(struct kmem_cache), 1, GFP_KERNEL);
-		c->refcount = 1;
 	}
 	return c;
 }
@@ -619,12 +616,19 @@ int kmem_cache_shrink(struct kmem_cache *d)
 }
 EXPORT_SYMBOL(kmem_cache_shrink);
 
+static unsigned int slob_ready __read_mostly;
+
+int slab_is_available(void)
+{
+	return slob_ready;
+}
+
 void __init kmem_cache_init(void)
 {
-	slab_state = UP;
+	slob_ready = 1;
 }
 
 void __init kmem_cache_init_late(void)
 {
-	slab_state = FULL;
+	/* Nothing to do */
 }
