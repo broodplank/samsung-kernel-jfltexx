@@ -27,11 +27,6 @@
 #define SIOP_INPUT_LIMIT_CURRENT 1200
 #define SIOP_CHARGING_LIMIT_CURRENT 1000
 
-#ifdef CONFIG_FORCE_FAST_CHARGE
-#include <linux/fastchg.h>
-#define USB_FASTCHG_LOAD 1000 /* uA */
-#endif 
-
 struct max77693_charger_data {
 	struct max77693_dev	*max77693;
 
@@ -710,13 +705,9 @@ static int sec_chg_get_property(struct power_supply *psy,
 		val->intval = max77693_get_health_state(charger);
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		if (force_fast_charge == 1)
-			charger->charging_current_max = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current_max;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
-		if (force_fast_charge == 1)
-			charger->charging_current = USB_FASTCHG_LOAD;
 		val->intval = charger->charging_current;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
@@ -800,12 +791,6 @@ static int sec_chg_set_property(struct power_supply *psy,
 			if (set_charging_current > 0 &&
 					set_charging_current < usb_charging_current)
 				set_charging_current = usb_charging_current;
-			if (force_fast_charge == 1)
-			{
-				set_charging_current = USB_FASTCHG_LOAD * charger->siop_level / 100;
-				charger->charging_current = USB_FASTCHG_LOAD;
-				charger->charging_current_max = USB_FASTCHG_LOAD;
-			}
 
 			if (val->intval == POWER_SUPPLY_TYPE_WIRELESS)
 				set_charging_current_max = wpc_charging_current;
@@ -844,27 +829,17 @@ static int sec_chg_set_property(struct power_supply *psy,
 		break;
 	/* val->intval : input charging current */
 	case POWER_SUPPLY_PROP_CURRENT_MAX:
-		if (force_fast_charge == 1)
-			charger->charging_current_max = USB_FASTCHG_LOAD;
-		else
-			charger->charging_current_max = val->intval;
-		pr_alert("KTMAX77693-6-%d",charger->charging_current_max);
+		charger->charging_current_max = val->intval;
 		break;
 	/*  val->intval : charging current */
 	case POWER_SUPPLY_PROP_CURRENT_AVG:
-		if (force_fast_charge == 1)
-			charger->charging_current = USB_FASTCHG_LOAD;
-		else
-			charger->charging_current = val->intval;
-		pr_alert("KTMAX77693-7-%d",charger->charging_current);
+		charger->charging_current = val->intval;
 		break;
 	case POWER_SUPPLY_PROP_CURRENT_NOW:
 		charger->siop_level = val->intval;
 		if (charger->is_charging) {
 			/* decrease the charging current according to siop level */
 			int current_now;
-			if (force_fast_charge == 1)
-				charger->charging_current = USB_FASTCHG_LOAD;
 			current_now = 
 				charger->charging_current * val->intval / 100;
 

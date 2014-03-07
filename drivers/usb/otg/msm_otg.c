@@ -52,11 +52,6 @@
 #include <mach/msm_bus.h>
 #include <mach/rpm-regulator.h>
 
-#ifdef CONFIG_FORCE_FAST_CHARGE
-#include <linux/fastchg.h>
-#define USB_FASTCHG_LOAD 1000 /* uA */
-#endif
-
 #define MSM_USB_BASE	(motg->regs)
 #define DRIVER_NAME	"msm_otg"
 
@@ -1189,14 +1184,6 @@ static void msm_otg_notify_charger(struct msm_otg *motg, unsigned mA)
 			"Failed notifying %d charger type to PMIC\n",
 							motg->chg_type);
 
-#ifdef CONFIG_FORCE_FAST_CHARGE
-  	if (force_fast_charge == 1) {
-      		pr_info("USB fast charging is ON - 1000mA, %d.\n", mA);
-      		mA = USB_FASTCHG_LOAD;
-  	} else {
-    		pr_info("USB fast charging is OFF, %d.\n", mA);
-  	}
-#endif
 	dev_info(motg->phy.dev, "Avail curr from USB = %u\n", mA);
 
 	if (motg->cur_power == mA)
@@ -1569,9 +1556,6 @@ static void msm_otg_start_peripheral(struct usb_otg *otg, int on)
 	if (!otg->gadget)
 		return;
 
-	if (force_fast_charge == 1 && on == 1)
-		on = 0;
-		
 #ifdef CONFIG_USB_HOST_NOTIFY
 	if (on == 1)
 		motg->ndev.mode = NOTIFY_PERIPHERAL_MODE;
@@ -2535,13 +2519,7 @@ static void msm_otg_sm_work(struct work_struct *w)
 					if(!slimport_is_connected()) {
 						pr_alert("KTOTG-USB_SDP_CHARGER");
 						msm_otg_start_peripheral(otg, 1);
-						//if (force_fast_charge == 0)
-							otg->phy->state = OTG_STATE_B_PERIPHERAL;
-						//else
-						//{
-						//	otg->phy->state = OTG_STATE_UNDEFINED;
-						//	otg->gadget->is_a_peripheral = 0;
-						//}
+						otg->phy->state = OTG_STATE_B_PERIPHERAL;
 					}
 					schedule_delayed_work(&motg->check_ta_work,
 						MSM_CHECK_TA_DELAY);
