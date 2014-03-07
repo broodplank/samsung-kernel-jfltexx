@@ -39,28 +39,28 @@
 #define DEF_SAMPLING_DOWN_FACTOR		(2)
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(5)
-#define DEF_FREQUENCY_UP_THRESHOLD		(85)
+#define DEF_FREQUENCY_UP_THRESHOLD		(70)
 
 /* for multiple freq_step */
-#define DEF_UP_THRESHOLD_DIFF	(5)
+#define DEF_UP_THRESHOLD_DIFF			(5)
 
-#define DEF_FREQUENCY_MIN_SAMPLE_RATE		(10000)
+#define DEF_FREQUENCY_MIN_SAMPLE_RATE		(5000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
-#define DEF_SAMPLING_RATE			(50000)
+#define DEF_SAMPLING_RATE			(40000)
 #define MIN_SAMPLING_RATE			(10000)
 
-#define DEF_FREQ_STEP				(37)
+#define DEF_FREQ_STEP				(55)
 /* for multiple freq_step */
 #define DEF_FREQ_STEP_DEC			(13)
 
 #define DEF_START_DELAY				(0)
 
 #define UP_THRESHOLD_AT_MIN_FREQ		(40)
-#define FREQ_FOR_RESPONSIVENESS			(384000)
+#define FREQ_FOR_RESPONSIVENESS			(1674000)
 /* for fast decrease */
 #define FREQ_FOR_FAST_DOWN			(1242000)
-#define UP_THRESHOLD_AT_FAST_DOWN		(95)
+#define UP_THRESHOLD_AT_FAST_DOWN		(90)
 
 static unsigned int min_sampling_rate;
 
@@ -81,9 +81,9 @@ struct cpufreq_governor cpufreq_gov_pegasusq = {
 enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
 
 struct cpu_dbs_info_s {
-	u64 prev_cpu_idle;
-	u64 prev_cpu_iowait;
-	u64 prev_cpu_wall;
+	cputime64_t prev_cpu_idle;
+	cputime64_t prev_cpu_iowait;
+	cputime64_t prev_cpu_wall;
 	unsigned int prev_cpu_wall_delta;
 	cputime64_t prev_cpu_nice;
 	struct cpufreq_policy *cur_policy;
@@ -391,10 +391,8 @@ static struct attribute_group dbs_attr_group = {
 
 static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 {
-#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
 	if (p->cur == p->max)
 		return;
-#endif
 
 	__cpufreq_driver_target(p, freq, CPUFREQ_RELATION_L);
 }
@@ -414,8 +412,8 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 
 	for_each_cpu(j, policy->cpus) {
 		struct cpu_dbs_info_s *j_dbs_info;
-		u64 cur_wall_time, cur_idle_time, cur_iowait_time;
-		u64 prev_wall_time, prev_idle_time, prev_iowait_time;
+		cputime64_t cur_wall_time, cur_idle_time, cur_iowait_time;
+		cputime64_t prev_wall_time, prev_idle_time, prev_iowait_time;
 		unsigned int idle_time, wall_time, iowait_time;
 		unsigned int load, load_freq;
 		int freq_avg;
@@ -507,11 +505,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* Check for frequency decrease */
-#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
 	/* if we cannot reduce the frequency anymore, break out early */
 	if (policy->cur == policy->min)
 		return;
-#endif
 
 	/*
 	 * The optimal frequency is the frequency that is the lowest that
@@ -652,7 +648,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_STOP:
-
 		dbs_timer_exit(this_dbs_info);
 
 		mutex_destroy(&this_dbs_info->timer_mutex);
@@ -670,6 +665,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
+		/* If device is being removed, skip set limits */
+		if (!this_dbs_info->cur_policy)
+			break;
 		mutex_lock(&this_dbs_info->timer_mutex);
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,

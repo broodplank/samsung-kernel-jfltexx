@@ -41,15 +41,15 @@
 #define MAX_SAMPLING_DOWN_FACTOR		(100000)
 #define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(5)
 #define MICRO_FREQUENCY_UP_THRESHOLD		(70)
-#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
+#define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(5000)
 #define MIN_FREQUENCY_UP_THRESHOLD		(11)
 #define MAX_FREQUENCY_UP_THRESHOLD		(100)
 #define MIN_FREQUENCY_DOWN_DIFFERENTIAL		(1)
-#define FREQ_STEP				(30)
+#define FREQ_STEP				(50)
 #define DEFAULT_FREQ_BOOST_TIME			(500000)
 #define MAX_FREQ_BOOST_TIME			(5000000)
-#define UP_THRESHOLD_AT_MIN_FREQ		(60)
-#define FREQ_FOR_RESPONSIVENESS			(594000)
+#define UP_THRESHOLD_AT_MIN_FREQ		(40)
+#define FREQ_FOR_RESPONSIVENESS			(1242000)
 
 static u64 hyper_freq_boosted_time;
 
@@ -66,8 +66,8 @@ static u64 hyper_freq_boosted_time;
 #define MIN_SAMPLING_RATE_RATIO			(2)
 
 static unsigned int min_sampling_rate;
-#define DEFAULT_SAMPLING_RATE			(50000)
-#define BOOSTED_SAMPLING_RATE			(20000)
+#define DEFAULT_SAMPLING_RATE			(80000)
+#define BOOSTED_SAMPLING_RATE			(40000)
 #define LATENCY_MULTIPLIER			(1000)
 #define MIN_LATENCY_MULTIPLIER			(100)
 #define TRANSITION_LATENCY_LIMIT		(10 * 1000 * 1000)
@@ -133,6 +133,7 @@ static struct dbs_tuners {
 	unsigned int up_threshold;
 	unsigned int up_threshold_min_freq;
 	unsigned int down_differential;
+	unsigned int micro_freq_up_threshold;
 	unsigned int ignore_nice;
 	unsigned int sampling_down_factor;
 	unsigned int powersave_bias;
@@ -150,6 +151,7 @@ static struct dbs_tuners {
 	.up_threshold_min_freq = UP_THRESHOLD_AT_MIN_FREQ,
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.down_differential = DEF_FREQUENCY_DOWN_DIFFERENTIAL,
+	.micro_freq_up_threshold = MICRO_FREQUENCY_UP_THRESHOLD,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
 	.freq_boost_time = DEFAULT_FREQ_BOOST_TIME,
@@ -315,6 +317,7 @@ show_one(up_threshold_min_freq, up_threshold_min_freq);
 show_one(sampling_down_factor, sampling_down_factor);
 show_one(ignore_nice_load, ignore_nice);
 show_one(powersave_bias, powersave_bias);
+show_one(micro_freq_up_threshold, micro_freq_up_threshold);
 show_one(down_differential, down_differential);
 show_one(boostpulse, boosted);
 show_one(boostfreq, boostfreq);
@@ -345,6 +348,7 @@ static void update_sampling_rate(unsigned int new_rate)
 
 	effective = effective_sampling_rate();
 
+	get_online_cpus();
 	for_each_online_cpu(cpu) {
 		struct cpufreq_policy *policy;
 		struct cpu_dbs_info_s *dbs_info;
@@ -406,6 +410,7 @@ static void update_sampling_rate(unsigned int new_rate)
 
 		mutex_unlock(&dbs_mutex);
 	}
+	put_online_cpus();
 }
 
 static ssize_t store_boostpulse(struct kobject *kobj, struct attribute *attr,
@@ -492,6 +497,19 @@ static ssize_t store_up_threshold(struct kobject *a, struct attribute *b,
 	}
 	dbs_tuners_ins.up_threshold = input;
 
+	return count;
+}
+
+static ssize_t store_micro_freq_up_threshold(struct kobject *a,
+			struct attribute *b, const char *buf, size_t count)
+{
+	unsigned int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+	dbs_tuners_ins.micro_freq_up_threshold = input;
 	return count;
 }
 
@@ -625,8 +643,8 @@ static ssize_t store_freq_responsiveness(struct kobject *a, struct attribute *b,
 	if (input > 1890000)
 		input = 1890000;
 
-	if (input < 384000)
-		input = 384000;
+	if (input < 378000)
+		input = 378000;
 
 	dbs_tuners_ins.freq_responsiveness = input;
 
@@ -641,6 +659,7 @@ define_one_global_rw(sampling_down_factor);
 define_one_global_rw(ignore_nice_load);
 define_one_global_rw(powersave_bias);
 define_one_global_rw(down_differential);
+define_one_global_rw(micro_freq_up_threshold);
 define_one_global_rw(boostpulse);
 define_one_global_rw(boostfreq);
 define_one_global_rw(freq_step);
@@ -656,6 +675,7 @@ static struct attribute *dbs_attributes[] = {
 	&powersave_bias.attr,
 	&io_is_busy.attr,
 	&down_differential.attr,
+	&micro_freq_up_threshold.attr,
 	&boostpulse.attr,
 	&boostfreq.attr,
 	&freq_step.attr,
@@ -674,10 +694,8 @@ static void dbs_freq_increase(struct cpufreq_policy *p, unsigned int freq)
 {
 	if (dbs_tuners_ins.powersave_bias)
 		freq = powersave_bias_target(p, freq, CPUFREQ_RELATION_H);
-#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
 	else if (p->cur == p->max)
 		return;
-#endif
 
 	__cpufreq_driver_target(p, freq, dbs_tuners_ins.powersave_bias ?
 			CPUFREQ_RELATION_L : CPUFREQ_RELATION_H);
@@ -877,11 +895,9 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	}
 
 	/* Check for frequency decrease */
-#if !defined(CONFIG_ARCH_EXYNOS4) && !defined(CONFIG_ARCH_EXYNOS5)
 	/* if we cannot reduce the frequency anymore, break out early */
 	if (policy->cur == policy->min)
 		return;
-#endif
 
 	/*
 	 * The optimal frequency is the frequency that is the lowest that
@@ -1083,6 +1099,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
+		/* If device is being removed, skip set limits */
+		if (!this_dbs_info->cur_policy)
+			break;
 		mutex_lock(&this_dbs_info->timer_mutex);
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,
@@ -1137,7 +1156,7 @@ static int __init cpufreq_gov_dbs_init(void)
 	put_cpu();
 	if (idle_time != -1ULL) {
 		/* Idle micro accounting is supported. Use finer thresholds */
-		dbs_tuners_ins.up_threshold = MICRO_FREQUENCY_UP_THRESHOLD;
+		dbs_tuners_ins.up_threshold = dbs_tuners_ins.micro_freq_up_threshold;
 		dbs_tuners_ins.down_differential =
 					MICRO_FREQUENCY_DOWN_DIFFERENTIAL;
 		/*
