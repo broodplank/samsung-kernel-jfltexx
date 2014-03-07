@@ -374,6 +374,8 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 	int pump_dec_step;
 	cputime64_t cur_wall_time, cur_idle_time;
 	unsigned int wall_time, idle_time;
+	unsigned int index = 0;
+	unsigned int tmp_freq = 0;
 	unsigned int next_freq = 0;
 	int cur_load = -1;
 	unsigned int cpu;
