@@ -72,7 +72,6 @@ void __init smp_set_ops(struct smp_operations *ops)
 };
 
 int __cpuinit __cpu_up(unsigned int cpu, struct task_struct *idle)
-
 {
 	int ret;
 

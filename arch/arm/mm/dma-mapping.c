@@ -1597,4 +1597,3 @@ int arm_iommu_attach_device(struct device *dev,
 }
 
 #endif
-

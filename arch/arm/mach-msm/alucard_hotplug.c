@@ -727,7 +727,7 @@ int __init alucard_hotplug_init(void)
 	if (num_online_cpus() > 1) {
 		delay -= jiffies % delay;
 	}
-	INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
+	INIT_DEFERRABLE_WORK(&alucard_hotplug_work, hotplug_work_fn);
 	queue_delayed_work_on(0, system_wq, &alucard_hotplug_work, delay);
 
 	return ret;
