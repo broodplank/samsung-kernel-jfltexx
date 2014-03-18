@@ -1,7 +1,6 @@
 /*
- * Author: Chad Froebel <chadfroebel@gmail.com>
+ * Author: Alucard_24 <alucard_24 XDA>
  *
- * Simple port to Nexus 4 : motley <motley.slate@gmail.com>
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -16,13 +15,15 @@
 
 #include <linux/kobject.h>
 #include <linux/sysfs.h>
-#include <linux/dvfs_touch_if.h>
+#include <linux/kallsyms.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/init.h>
 #include <linux/cpufreq.h>
 #include <linux/cpu.h>
+#include <linux/dvfs_touch_if.h>
 
+atomic_t dvfs_enable = ATOMIC_INIT(1);
 atomic_t dvfs_min_touch_limit = ATOMIC_INIT(DVFS_MIN_TOUCH_LIMIT);
 atomic_t dvfs_min_touch_limit_second = ATOMIC_INIT(DVFS_MIN_TOUCH_LIMIT_SECOND);
 atomic_t syn_touch_booster_off_time = ATOMIC_INIT(SYN_TOUCH_BOOSTER_OFF_TIME);
@@ -32,6 +33,11 @@ atomic_t cyp_touch_booster_off_time = ATOMIC_INIT(CYP_TOUCH_BOOSTER_OFF_TIME);
 atomic_t cyp_touch_booster_chg_time = ATOMIC_INIT(CYP_TOUCH_BOOSTER_CHG_TIME);
 atomic_t gpio_key_booster_off_time = ATOMIC_INIT(GPIO_KEY_BOOSTER_OFF_TIME);
 atomic_t gpio_key_booster_chg_time = ATOMIC_INIT(GPIO_KEY_BOOSTER_CHG_TIME);
+
+static ssize_t show_dvfs_enable(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+{
+	return sprintf(buf, "%d\n", atomic_read(&dvfs_enable));
+}
 
 static ssize_t show_dvfs_min_touch_limit(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
@@ -76,6 +82,27 @@ static ssize_t show_gpio_key_booster_off_time(struct kobject *kobj, struct kobj_
 static ssize_t show_gpio_key_booster_chg_time(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
 	return sprintf(buf, "%d\n", atomic_read(&gpio_key_booster_chg_time));
+}
+
+static ssize_t store_dvfs_enable(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+{
+
+	int input;
+	int ret;
+
+	ret = sscanf(buf, "%d", &input);
+	if (ret != 1) {
+		return -EINVAL;
+	}
+
+	input = max(min(input, 1),0);
+
+	if (input != atomic_read(&dvfs_enable)) {
+		/* update only if valid value provided */
+		atomic_set(&dvfs_enable,input);
+	}
+
+	return count;
 }
 
 static ssize_t store_dvfs_min_touch_limit(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
@@ -267,6 +294,10 @@ static ssize_t store_gpio_key_booster_chg_time(struct kobject *kobj, struct kobj
 	return count;
 }
 
+static struct kobj_attribute dvfs_enable_attr =
+	__ATTR(dvfs_enable, 0666, show_dvfs_enable,
+			store_dvfs_enable);
+
 static struct kobj_attribute dvfs_min_touch_limit_attr =
 	__ATTR(dvfs_min_touch_limit, 0666, show_dvfs_min_touch_limit,
 			store_dvfs_min_touch_limit);
@@ -304,6 +335,7 @@ static struct kobj_attribute gpio_key_booster_chg_time_attr =
 			store_gpio_key_booster_chg_time);
 
 static struct attribute *dvfs_touch_if_attrs[] = {
+	&dvfs_enable_attr.attr,
 	&dvfs_min_touch_limit_attr.attr,
 	&dvfs_min_touch_limit_second_attr.attr,
 	&syn_touch_booster_off_time_attr.attr,
@@ -318,33 +350,28 @@ static struct attribute *dvfs_touch_if_attrs[] = {
 
 static struct attribute_group dvfs_touch_if_attr_group = {
 	.attrs = dvfs_touch_if_attrs,
+	.name = "dvfs_touch_if",
 };
 
-/* Initialize dvfs_touch_if sysfs folder */
-static struct kobject *dvfs_touch_if_kobj;
-
-
-int dvfs_touch_if_init(void)
+int __init dvfs_touch_if_init(void)
 {
 	int rc;
 
-	dvfs_touch_if_kobj = kobject_create_and_add("dvfs_touch_if", kernel_kobj);
-	if (!dvfs_touch_if_kobj) {
-			return -ENOMEM;
+	rc = sysfs_create_group(kernel_kobj, &dvfs_touch_if_attr_group);
+
+	if (rc) {
+		pr_info("%s sysfs create failed!\n", __FUNCTION__);
 	}
-
-	rc = sysfs_create_group(dvfs_touch_if_kobj, &dvfs_touch_if_attr_group);
-
-	if (rc)
-		kobject_put(dvfs_touch_if_kobj);
 
 	return (rc);
 }
 
-void dvfs_touch_if_exit(void)
+void __exit dvfs_touch_if_exit(void)
 {
-	kobject_put(dvfs_touch_if_kobj);
 }
 
+MODULE_AUTHOR("Alucard_24 XDA");
+MODULE_DESCRIPTION("DVFS Touch booster interface ver. 2.0");
+MODULE_LICENSE("GPL");
 module_init(dvfs_touch_if_init);
 module_exit(dvfs_touch_if_exit);

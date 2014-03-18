@@ -20,6 +20,7 @@
 #include "power.h"
 #ifdef CONFIG_SEC_DVFS
 #include <linux/cpufreq.h>
+#include <linux/dvfs_touch_if.h>
 #endif
 
 #include <linux/mfd/pm8xxx/misc.h>
@@ -550,7 +551,7 @@ int set_freq_limit(unsigned long id, unsigned int freq)
 
 	mutex_lock(&dvfs_mutex);
 
-	if (freq == -1)
+	if (freq == -1 || atomic_read(&dvfs_enable) == 0)
 		dvfs_id &= ~id;
 	else
 		dvfs_id |= id;
@@ -587,8 +588,8 @@ int set_freq_limit(unsigned long id, unsigned int freq)
 	set_min_lock(min);
 	set_max_lock(max);
 
-	pr_info("%s: 0x%lu %d, min %d, max %d\n",
-				__func__, id, freq, min, max);
+	//pr_info("%s: 0x%lu %d, min %d, max %d\n",
+	//			__func__, id, freq, min, max);
 
 	/* need to update now */
 	if (id & UPDATE_NOW_BITS) {
