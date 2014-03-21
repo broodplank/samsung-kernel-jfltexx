@@ -20,7 +20,6 @@
 #include "power.h"
 #ifdef CONFIG_SEC_DVFS
 #include <linux/cpufreq.h>
-#include <linux/dvfs_touch_if.h>
 #endif
 
 #include <linux/mfd/pm8xxx/misc.h>
