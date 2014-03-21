@@ -551,7 +551,7 @@ int set_freq_limit(unsigned long id, unsigned int freq)
 
 	mutex_lock(&dvfs_mutex);
 
-	if (freq == -1 || atomic_read(&dvfs_enable) == 0)
+	if (freq == -1)
 		dvfs_id &= ~id;
 	else
 		dvfs_id |= id;

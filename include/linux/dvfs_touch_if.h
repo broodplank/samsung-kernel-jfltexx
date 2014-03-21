@@ -29,7 +29,7 @@
 #define GPIO_KEY_BOOSTER_OFF_TIME	300
 #define GPIO_KEY_BOOSTER_CHG_TIME	200
 
-extern atomic_t dvfs_enable;
+extern atomic_t dvfs_boost_mode;
 extern atomic_t dvfs_min_touch_limit;
 extern atomic_t dvfs_min_touch_limit_second;
 extern atomic_t syn_touch_booster_off_time;

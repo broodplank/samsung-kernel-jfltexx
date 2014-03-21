@@ -686,6 +686,12 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 	int ret = 0;
 	int min_touch_limit = 0;
 	int touch_booster_time = 0;
+	int dvfs_boost_lvl = 0;
+
+	dvfs_boost_lvl = atomic_read(&dvfs_boost_mode);
+
+	if (rmi4_data->dvfs_boost_mode != dvfs_boost_lvl)
+		rmi4_data->dvfs_boost_mode = dvfs_boost_lvl;
 
 	if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_NONE) {
 		dev_info(&rmi4_data->i2c_client->dev,

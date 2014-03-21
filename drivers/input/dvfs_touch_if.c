@@ -23,7 +23,7 @@
 #include <linux/cpu.h>
 #include <linux/dvfs_touch_if.h>
 
-atomic_t dvfs_enable = ATOMIC_INIT(1);
+atomic_t dvfs_boost_mode = ATOMIC_INIT(2);
 atomic_t dvfs_min_touch_limit = ATOMIC_INIT(DVFS_MIN_TOUCH_LIMIT);
 atomic_t dvfs_min_touch_limit_second = ATOMIC_INIT(DVFS_MIN_TOUCH_LIMIT_SECOND);
 atomic_t syn_touch_booster_off_time = ATOMIC_INIT(SYN_TOUCH_BOOSTER_OFF_TIME);
@@ -34,9 +34,9 @@ atomic_t cyp_touch_booster_chg_time = ATOMIC_INIT(CYP_TOUCH_BOOSTER_CHG_TIME);
 atomic_t gpio_key_booster_off_time = ATOMIC_INIT(GPIO_KEY_BOOSTER_OFF_TIME);
 atomic_t gpio_key_booster_chg_time = ATOMIC_INIT(GPIO_KEY_BOOSTER_CHG_TIME);
 
-static ssize_t show_dvfs_enable(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
+static ssize_t show_dvfs_boost_mode(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", atomic_read(&dvfs_enable));
+	return sprintf(buf, "%d\n", atomic_read(&dvfs_boost_mode));
 }
 
 static ssize_t show_dvfs_min_touch_limit(struct kobject *kobj, struct kobj_attribute *attr, char *buf)
@@ -84,7 +84,7 @@ static ssize_t show_gpio_key_booster_chg_time(struct kobject *kobj, struct kobj_
 	return sprintf(buf, "%d\n", atomic_read(&gpio_key_booster_chg_time));
 }
 
-static ssize_t store_dvfs_enable(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
+static ssize_t store_dvfs_boost_mode(struct kobject *kobj, struct kobj_attribute *attr, const char *buf, size_t count)
 {
 
 	int input;
@@ -95,11 +95,12 @@ static ssize_t store_dvfs_enable(struct kobject *kobj, struct kobj_attribute *at
 		return -EINVAL;
 	}
 
-	input = max(min(input, 1),0);
+	if (input != 0 && input != 1 && input != 2)
+		input = 0;
 
-	if (input != atomic_read(&dvfs_enable)) {
+	if (input != atomic_read(&dvfs_boost_mode)) {
 		/* update only if valid value provided */
-		atomic_set(&dvfs_enable,input);
+		atomic_set(&dvfs_boost_mode,input);
 	}
 
 	return count;
@@ -294,9 +295,9 @@ static ssize_t store_gpio_key_booster_chg_time(struct kobject *kobj, struct kobj
 	return count;
 }
 
-static struct kobj_attribute dvfs_enable_attr =
-	__ATTR(dvfs_enable, 0666, show_dvfs_enable,
-			store_dvfs_enable);
+static struct kobj_attribute dvfs_boost_mode_attr =
+	__ATTR(dvfs_boost_mode, 0666, show_dvfs_boost_mode,
+			store_dvfs_boost_mode);
 
 static struct kobj_attribute dvfs_min_touch_limit_attr =
 	__ATTR(dvfs_min_touch_limit, 0666, show_dvfs_min_touch_limit,
@@ -335,7 +336,7 @@ static struct kobj_attribute gpio_key_booster_chg_time_attr =
 			store_gpio_key_booster_chg_time);
 
 static struct attribute *dvfs_touch_if_attrs[] = {
-	&dvfs_enable_attr.attr,
+	&dvfs_boost_mode_attr.attr,
 	&dvfs_min_touch_limit_attr.attr,
 	&dvfs_min_touch_limit_second_attr.attr,
 	&syn_touch_booster_off_time_attr.attr,
