@@ -704,7 +704,7 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 	if (on == 0) {
 		if (rmi4_data->dvfs_lock_status) {
 			touch_booster_time = atomic_read(&syn_touch_booster_off_time);
-			queue_delayed_work(system_power_efficient_wq, &rmi4_data->work_dvfs_off,
+			schedule_delayed_work(&rmi4_data->work_dvfs_off,
 				msecs_to_jiffies(touch_booster_time));
 		}
 	} else if (on > 0) {
@@ -731,7 +731,7 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 				}
 
 				touch_booster_time = atomic_read(&syn_touch_booster_chg_time);
-				queue_delayed_work(system_power_efficient_wq, &rmi4_data->work_dvfs_chg,
+				schedule_delayed_work(&rmi4_data->work_dvfs_chg,
 					msecs_to_jiffies(touch_booster_time));
 
 				rmi4_data->dvfs_lock_status = true;
@@ -2571,7 +2571,7 @@ static void synaptics_work_rezero(struct work_struct *work)
 
 void synaptics_rmi4_f51_set_custom_rezero(struct synaptics_rmi4_data *rmi4_data)
 {
-	queue_delayed_work(system_power_efficient_wq, &rmi4_data->work_rezero,
+	schedule_delayed_work(&rmi4_data->work_rezero,
 				msecs_to_jiffies(300));
 }
 #endif
@@ -3742,7 +3742,7 @@ static void synaptics_init_power_on(struct work_struct *work)
 	if (!touch_display_status) {
 			dev_info(&rmi4_data->i2c_client->dev,
 					"%s: until lcd does not turn on.\n", __func__);
-			queue_delayed_work(system_power_efficient_wq, &rmi4_data->work_init_power_on,
+			schedule_delayed_work(&rmi4_data->work_init_power_on,
 					msecs_to_jiffies(1000));
 	} else {
 		synaptics_rmi4_late_resume(&rmi4_data->early_suspend);
@@ -3922,7 +3922,7 @@ static int __devinit synaptics_rmi4_probe(struct i2c_client *client,
 
 	INIT_DELAYED_WORK(&rmi4_data->work_init_power_on,
 					synaptics_init_power_on);
-	queue_delayed_work(system_power_efficient_wq, &rmi4_data->work_init_power_on,
+	schedule_delayed_work(&rmi4_data->work_init_power_on,
 					msecs_to_jiffies(6000));
 #endif
 
