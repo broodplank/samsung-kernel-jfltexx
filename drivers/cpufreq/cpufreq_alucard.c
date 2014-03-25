@@ -459,6 +459,7 @@ static void alucard_check_cpu(struct cpufreq_alucard_cpuinfo *this_alucard_cpuin
 static void do_alucard_timer(struct work_struct *work)
 {
 	struct cpufreq_alucard_cpuinfo *alucard_cpuinfo;
+	unsigned int sampling_rate;
 	int delay;
 	unsigned int cpu;
 
@@ -467,17 +468,17 @@ static void do_alucard_timer(struct work_struct *work)
 
 	mutex_lock(&alucard_cpuinfo->timer_mutex);
 
-	delay = usecs_to_jiffies(atomic_read(&alucard_tuners_ins.sampling_rate));
-
-	if (need_load_eval(alucard_cpuinfo, delay))
-		alucard_check_cpu(alucard_cpuinfo);
-
+	sampling_rate = atomic_read(&alucard_tuners_ins.sampling_rate);
+	delay = usecs_to_jiffies(sampling_rate);
 	/* We want all CPUs to do sampling nearly on
 	 * same jiffy
 	 */
 	if (num_online_cpus() > 1) {
 		delay -= jiffies % delay;
 	}
+
+	if (need_load_eval(alucard_cpuinfo, sampling_rate))
+		alucard_check_cpu(alucard_cpuinfo);
 
 	queue_delayed_work_on(cpu, system_power_efficient_wq, &alucard_cpuinfo->work, delay);
 	mutex_unlock(&alucard_cpuinfo->timer_mutex);

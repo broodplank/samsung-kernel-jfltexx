@@ -345,6 +345,7 @@ static void darkness_check_cpu(struct cpufreq_darkness_cpuinfo *this_darkness_cp
 static void do_darkness_timer(struct work_struct *work)
 {
 	struct cpufreq_darkness_cpuinfo *darkness_cpuinfo;
+	unsigned int sampling_rate;
 	int delay;
 	unsigned int cpu;
 
@@ -353,16 +354,17 @@ static void do_darkness_timer(struct work_struct *work)
 
 	mutex_lock(&darkness_cpuinfo->timer_mutex);
 
-	if (need_load_eval(darkness_cpuinfo, delay))
-		darkness_check_cpu(darkness_cpuinfo);
-
+	sampling_rate = atomic_read(&darkness_tuners_ins.sampling_rate);
+	delay = usecs_to_jiffies(sampling_rate);
 	/* We want all CPUs to do sampling nearly on
 	 * same jiffy
 	 */
-	delay = usecs_to_jiffies(atomic_read(&darkness_tuners_ins.sampling_rate));
 	if (num_online_cpus() > 1) {
 		delay -= jiffies % delay;
 	}
+
+	if (need_load_eval(darkness_cpuinfo, sampling_rate))
+		darkness_check_cpu(darkness_cpuinfo);
 
 	queue_delayed_work_on(cpu, system_power_efficient_wq, &darkness_cpuinfo->work, delay);
 	mutex_unlock(&darkness_cpuinfo->timer_mutex);
