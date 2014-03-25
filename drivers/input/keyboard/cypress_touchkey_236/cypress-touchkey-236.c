@@ -317,6 +317,12 @@ static void cypress_set_dvfs_lock(struct cypress_touchkey_info *info,
 	int ret = 0;
 	int min_touch_limit = 0;
 	int touch_booster_time = 0;
+	int dvfs_boost_lvl = 0;
+
+	dvfs_boost_lvl = atomic_read(&dvfs_boost_mode);
+	if (dvfs_boost_lvl == 0)
+		return;
+
 	mutex_lock(&info->dvfs_lock);
 	if (on == 0) {
 		if (info->dvfs_lock_status) {
