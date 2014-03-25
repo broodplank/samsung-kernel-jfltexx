@@ -566,9 +566,6 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 	hotplug_enable = atomic_read(&hotplug_tuners_ins.hotplug_enable) > 0;
 
 	if (hotplug_enable) {
-		/* set hotplugging_rate used */
-		++hotplugging_rate;
-
 		sampling_rate = atomic_read(&hotplug_tuners_ins.hotplug_sampling_rate);
 		delay = usecs_to_jiffies(sampling_rate);
 		if (num_online_cpus() > 1) {
@@ -576,6 +573,8 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 		}
 
 		if (need_load_eval(sampling_rate)) {
+			/* set hotplugging_rate used */
+			++hotplugging_rate;
 			upmaxcoreslimit = atomic_read(&hotplug_tuners_ins.maxcoreslimit);
 	 		up_rate = atomic_read(&hotplug_tuners_ins.cpu_up_rate);
 			down_rate = atomic_read(&hotplug_tuners_ins.cpu_down_rate);
@@ -680,13 +679,13 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 						}
 				}
 			}
-		}
-		if (hotplugging_rate >= max(up_rate, down_rate)) {
-			hotplugging_rate = 0;
-		}
+			if (hotplugging_rate >= max(up_rate, down_rate)) {
+				hotplugging_rate = 0;
+			}
 
-		if (num_online_cpus() == 1) {
-			per_cpu(od_hotplug_cpuinfo, 0).up_cpu = 1;
+			if (num_online_cpus() == 1) {
+				per_cpu(od_hotplug_cpuinfo, 0).up_cpu = 1;
+			}
 		}
 		queue_delayed_work_on(0, system_power_efficient_wq, &alucard_hotplug_work, delay);
 	}
