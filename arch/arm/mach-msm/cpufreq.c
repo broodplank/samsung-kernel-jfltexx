@@ -171,7 +171,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 	struct cpufreq_freqs freqs;
 	struct cpu_freq *limit = &per_cpu(cpu_freq_info, policy->cpu);
 	struct sched_param param = { .sched_priority = MAX_RT_PRIO-1 };
-	struct cpufreq_frequency_table *table;
 
 	if (limit->limits_init) {
 		if (new_freq > limit->allowed_max) {
@@ -206,12 +205,6 @@ static int set_cpu_freq(struct cpufreq_policy *policy, unsigned int new_freq,
 			return 0;
 	}
 #endif
-
-	/* limits applied above must be in cpufreq table */
-	table = cpufreq_frequency_get_table(policy->cpu);
-	if (cpufreq_frequency_table_target(policy, table, new_freq,
-		CPUFREQ_RELATION_H, &index))
-		return -EINVAL;
 
 	freqs.old = policy->cur;
 	freqs.new = new_freq;
@@ -448,16 +441,19 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 				policy->cpu, cur_freq);
 		return -EINVAL;
 	}
-	/*
-	 * Call set_cpu_freq unconditionally so that when cpu is set to
-	 * online, frequency limit will always be updated.
-	 */
-	ret = set_cpu_freq(policy, table[index].frequency, table[index].index);
-	if (ret)
-		return ret;
-	pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
-			policy->cpu, cur_freq, table[index].frequency);
-	policy->cur = table[index].frequency;
+
+	if (cur_freq != table[index].frequency) {
+		int ret = 0;
+		ret = acpuclk_set_rate(policy->cpu, table[index].frequency,
+				SETRATE_CPUFREQ);
+		if (ret)
+			return ret;
+		pr_debug("cpufreq: cpu%d init at %d switching to %d\n",
+				policy->cpu, cur_freq, table[index].frequency);
+		cur_freq = table[index].frequency;
+	}
+
+	policy->cur = cur_freq;
 
 	policy->cpuinfo.transition_latency =
 		acpuclk_get_switch_time() * NSEC_PER_USEC;
