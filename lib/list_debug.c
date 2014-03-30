@@ -10,7 +10,6 @@
 #include <linux/list.h>
 #include <linux/bug.h>
 #include <linux/kernel.h>
-#include <linux/bug.h>
 
 /*
  * Insert a new entry between two known consecutive entries.
@@ -31,10 +30,14 @@ void __list_add(struct list_head *new,
 		"list_add corruption. prev->next should be "
 		"next (%p), but was %p. (prev=%p).\n",
 		next, prev->next, prev);
-
+#if 0
 	BUG_ON(((prev->next != next) || (next->prev != prev)) &&
 		PANIC_CORRUPTION);
-
+#endif
+	if ((prev->next != next) || (next->prev != prev))
+	{
+		panic("list corruption during add");
+	}
 	next->prev = new;
 	new->next = next;
 	new->prev = prev;
@@ -61,7 +64,10 @@ void __list_del_entry(struct list_head *entry)
 	    WARN(next->prev != entry,
 		"list_del corruption. next->prev should be %p, "
 		"but was %p\n", entry, next->prev)) {
+#if 0
 		BUG_ON(PANIC_CORRUPTION);
+#endif
+		panic("list corruption during del");
 		return;
 	}
 

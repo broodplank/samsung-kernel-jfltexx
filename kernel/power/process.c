@@ -86,8 +86,7 @@ static int try_to_freeze_tasks(bool user_only)
 
 		/*
 		 * We need to retry, but first give the freezing tasks some
-		 * time to enter the refrigerator.  Start with an initial
-		 * 1 ms sleep followed by exponential backoff until 8 ms.
+		 * time to enter the regrigerator.
 		 */
 		usleep_range(sleep_usecs / 2, sleep_usecs);
 		if (sleep_usecs < 8 * USEC_PER_MSEC)
@@ -123,7 +122,8 @@ static int try_to_freeze_tasks(bool user_only)
 			read_lock(&tasklist_lock);
 			do_each_thread(g, p) {
 				if (p != current && !freezer_should_skip(p)
-				    && freezing(p) && !frozen(p))
+				    && freezing(p) && !frozen(p) &&
+				    elapsed_msecs > 1000)
 					sched_show_task(p);
 			} while_each_thread(g, p);
 			read_unlock(&tasklist_lock);

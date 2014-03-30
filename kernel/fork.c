@@ -582,8 +582,9 @@ EXPORT_SYMBOL_GPL(__mmdrop);
 /*
  * Decrement the use count and release all resources for an mm.
  */
-void mmput(struct mm_struct *mm)
+int mmput(struct mm_struct *mm)
 {
+	int mm_freed = 0;
 	might_sleep();
 
 	if (atomic_dec_and_test(&mm->mm_users)) {
@@ -597,10 +598,13 @@ void mmput(struct mm_struct *mm)
 			list_del(&mm->mmlist);
 			spin_unlock(&mmlist_lock);
 		}
+		put_swap_token(mm);
 		if (mm->binfmt)
 			module_put(mm->binfmt->module);
 		mmdrop(mm);
+		mm_freed = 1;
 	}
+	return mm_freed;
 }
 EXPORT_SYMBOL_GPL(mmput);
 
@@ -812,6 +816,10 @@ struct mm_struct *dup_mm(struct task_struct *tsk)
 	memcpy(mm, oldmm, sizeof(*mm));
 	mm_init_cpumask(mm);
 
+	/* Initializing for Swap token stuff */
+	mm->token_priority = 0;
+	mm->last_interval = 0;
+
 #ifdef CONFIG_TRANSPARENT_HUGEPAGE
 	mm->pmd_huge_pte = NULL;
 #endif
@@ -889,6 +897,10 @@ static int copy_mm(unsigned long clone_flags, struct task_struct *tsk)
 		goto fail_nomem;
 
 good_mm:
+	/* Initializing for Swap token stuff */
+	mm->token_priority = 0;
+	mm->last_interval = 0;
+
 	tsk->mm = mm;
 	tsk->active_mm = mm;
 	return 0;
