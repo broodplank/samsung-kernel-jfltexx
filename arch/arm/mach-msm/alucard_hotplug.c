@@ -49,7 +49,7 @@ static struct hotplug_tuners {
 	atomic_t cpu_down_rate;
 	atomic_t maxcoreslimit;
 } hotplug_tuners_ins = {
-	.hotplug_sampling_rate = ATOMIC_INIT(60000),
+	.hotplug_sampling_rate = ATOMIC_INIT(60),
 	.hotplug_enable = ATOMIC_INIT(0),
 	.cpu_up_rate = ATOMIC_INIT(2),
 	.cpu_down_rate = ATOMIC_INIT(20),
@@ -329,8 +329,8 @@ static void cpus_hotplugging(bool state) {
 	} else {
 		mutex_unlock(&timer_mutex);
 		cancel_delayed_work_sync(&alucard_hotplug_work);
-		cancel_delayed_work_sync(&up_work);
-		cancel_delayed_work_sync(&down_work);
+		cancel_work_sync(&up_work);
+		cancel_work_sync(&down_work);
 		stop_rq_work();
 		mutex_lock(&timer_mutex);
 	}
@@ -771,8 +771,8 @@ static int __init alucard_hotplug_init(void)
 static void __exit alucard_hotplug_exit(void)
 {
 	cancel_delayed_work_sync(&alucard_hotplug_work);
-	cancel_delayed_work_sync(&up_work);
-	cancel_delayed_work_sync(&down_work);
+	cancel_work_sync(&up_work);
+	cancel_work_sync(&down_work);
 	stop_rq_work();
 
 	mutex_destroy(&timer_mutex);
