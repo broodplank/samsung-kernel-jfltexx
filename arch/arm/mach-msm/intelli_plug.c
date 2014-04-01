@@ -34,8 +34,8 @@
 #define INTELLI_PLUG_MAJOR_VERSION	3
 #define INTELLI_PLUG_MINOR_VERSION	0
 
-#define DEF_SAMPLING_MS			(1000)
-#define BUSY_SAMPLING_MS		(500)
+#define DEF_SAMPLING_MS			(20)
+#define BUSY_SAMPLING_MS		(60)
 
 #define BUSY_PERSISTENCE		10
 #define DUAL_CORE_PERSISTENCE		7
@@ -150,8 +150,8 @@ static void intelli_plug_active_eval_fn(unsigned int status)
 	atomic_set(&intelli_plug_active, status);
 
 	if (status == 1) {
-		schedule_delayed_work(&intelli_plug_work,
-				msecs_to_jiffies(10));
+		schedule_delayed_work_on(0, &intelli_plug_work,
+				msecs_to_jiffies(20));
 	} else {
 		cancel_delayed_work(&intelli_plug_work);
 	}
@@ -458,7 +458,7 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 	} else if (debug_intelli_plug) {
 		pr_info("intelli_plug is suspened!\n");
 	}
-	schedule_delayed_work(&intelli_plug_work,
+	schedule_delayed_work_on(0, &intelli_plug_work,
 		msecs_to_jiffies(sampling_time));
 }
 
@@ -553,8 +553,8 @@ static int __init intelli_plug_init(void)
 	INIT_DELAYED_WORK(&intelli_plug_work, intelli_plug_work_fn);
 
 	if (atomic_read(&intelli_plug_active) == 1) {
-		schedule_delayed_work(&intelli_plug_work,
-			msecs_to_jiffies(10) + 2 * HZ);
+		schedule_delayed_work_on(0, &intelli_plug_work,
+			msecs_to_jiffies(20));
 	}
 
 	return 0;
