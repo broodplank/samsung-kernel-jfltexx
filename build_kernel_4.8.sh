@@ -29,9 +29,6 @@ if [ $? == 1 ]; then
 	exit 1;
 fi;
 
-echo "Setup Package Directory"
-mkdir -p $PACKAGEDIR/system/lib/modules
-
 if [ -d $INITRAMFS_TMP ]; then
 	echo "removing old temp initramfs_source";
 	rm -rf $INITRAMFS_TMP;
@@ -42,9 +39,6 @@ cp $KERNELDIR/.config $KERNELDIR/arch/arm/configs/$KERNEL_CONFIG;
 
 # remove all old modules before compile
 for i in `find $KERNELDIR/ -name "*.ko"`; do
-	rm -f $i;
-done;
-for i in `find $PACKAGEDIR/system/lib/modules/ -name "*.ko"`; do
 	rm -f $i;
 done;
 
@@ -96,14 +90,14 @@ make -j${NAMBEROFCPUS} || exit 1;
 
 echo "Copy modules to Package"
 for i in `find $KERNELDIR -name '*.ko'`; do
-	cp -av $i $PACKAGEDIR/system/lib/modules/;
+	cp -av $i $INITRAMFS_TMP/lib/modules/;
 done;
 
-for i in `find $PACKAGEDIR/system/lib/modules/ -name '*.ko'`; do
+for i in `find $INITRAMFS_TMP/lib/modules/ -name '*.ko'`; do
 	${CROSS_COMPILE}strip --strip-unneeded $i;
 done;
 
-chmod 644 $PACKAGEDIR/system/lib/modules/*;
+chmod 644 $INITRAMFS_TMP/lib/modules/*;
 
 if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	echo "Copy zImage to Package"
@@ -112,7 +106,7 @@ if [ -e $KERNELDIR/arch/arm/boot/zImage ]; then
 	echo "Make boot.img"
 	./mkbootfs $INITRAMFS_TMP | gzip > $PACKAGEDIR/ramdisk.gz
 	#./mkbootimg --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --cmdline "console=null androidboot.hardware=qcom user_debug=31 msm_rtb.filter=0x3F ehci-hcd.park=3" -o $PACKAGEDIR/boot.img --base "0x80200000" --ramdiskaddr "0x82200000"
-	./mkbootimg --cmdline 'console = null androidboot.hardware=qcom user_debug=31 zcache androidboot.selinux=permissive' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x80200000 --pagesize 2048 --ramdisk_offset 0x02000000 --output $PACKAGEDIR/boot.img
+	./mkbootimg --cmdline 'console = null androidboot.hardware=qcom user_debug=31 androidboot.selinux=permissive' --kernel $PACKAGEDIR/zImage --ramdisk $PACKAGEDIR/ramdisk.gz --base 0x80200000 --pagesize 2048 --ramdisk_offset 0x02000000 --output $PACKAGEDIR/boot.img
 	cd $PACKAGEDIR
 
 	if [ -e ramdisk.gz ]; then
