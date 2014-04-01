@@ -57,9 +57,7 @@ ENTRY(cpu_v7_switch_mm)
 #endif
 	mcr	p15, 0, r2, c13, c0, 1		@ set reserved context ID
 	isb
-1:
-	mcr	p15, 0, r0, c2, c0, 0		@ set TTB 0
-
+1:	mcr	p15, 0, r0, c2, c0, 0		@ set TTB 0
 	isb
 #ifdef CONFIG_ARM_ERRATA_754322
 	dsb
@@ -82,9 +80,7 @@ ENDPROC(cpu_v7_switch_mm)
  */
 ENTRY(cpu_v7_set_pte_ext)
 #ifdef CONFIG_MMU
-
 	str	r1, [r0]			@ linux version
-#endif
 
 	bic	r3, r1, #0x000003f0
 	bic	r3, r3, #PTE_TYPE_MASK
@@ -116,7 +112,8 @@ ENTRY(cpu_v7_set_pte_ext)
  ARM(	str	r3, [r0, #2048]! )
  THUMB(	add	r0, r0, #2048 )
  THUMB(	str	r3, [r0] )
- 	mcr     p15, 0, r0, c7, c10, 1          @ flush_pte
+	mcr	p15, 0, r0, c7, c10, 1		@ flush_pte
+#endif
 	mov	pc, lr
 ENDPROC(cpu_v7_set_pte_ext)
 

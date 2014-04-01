@@ -456,8 +456,8 @@ ssize_t logger_aio_write(struct kiocb *iocb, const struct iovec *iov,
 	struct timespec now;
 	ssize_t ret = 0;
 
-  	if (!log_enabled)
-     	return 0;
+	if (!log_enabled)
+		return 0;
 
 	now = current_kernel_time();
 

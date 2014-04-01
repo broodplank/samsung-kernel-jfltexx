@@ -327,6 +327,7 @@ static inline pte_t pte_modify(pte_t pte, pgprot_t newprot)
  */
 #define HAVE_ARCH_UNMAPPED_AREA
 #define HAVE_ARCH_UNMAPPED_AREA_TOPDOWN
+
 /*
  * remap a physical page `pfn' of size `size' with page protection `prot'
  * into virtual address `from'

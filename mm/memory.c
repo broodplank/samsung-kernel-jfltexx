@@ -58,7 +58,6 @@
 #include <linux/swapops.h>
 #include <linux/elf.h>
 #include <linux/gfp.h>
-#include <linux/bug.h>
 
 #include <asm/io.h>
 #include <asm/pgalloc.h>
@@ -154,9 +153,6 @@ static void add_mm_counter_fast(struct mm_struct *mm, int member, int val)
 
 /* sync counter once per 64 page faults */
 #define TASK_RSS_EVENTS_THRESH	(64)
-#if defined(CONFIG_VMWARE_MVP)
-EXPORT_SYMBOL_GPL(get_mm_counter);
-#endif
 static void check_sync_rss_stat(struct task_struct *task)
 {
 	if (unlikely(task != current))
@@ -169,6 +165,9 @@ static void check_sync_rss_stat(struct task_struct *task)
 #define inc_mm_counter_fast(mm, member) inc_mm_counter(mm, member)
 #define dec_mm_counter_fast(mm, member) dec_mm_counter(mm, member)
 
+#if defined(CONFIG_VMWARE_MVP)
+EXPORT_SYMBOL_GPL(get_mm_counter);
+#endif
 static void check_sync_rss_stat(struct task_struct *task)
 {
 }
@@ -714,9 +713,6 @@ static void print_bad_pte(struct vm_area_struct *vma, unsigned long addr,
 	if (vma->vm_file && vma->vm_file->f_op)
 		print_symbol(KERN_ALERT "vma->vm_file->f_op->mmap: %s\n",
 				(unsigned long)vma->vm_file->f_op->mmap);
-
-	BUG_ON(PANIC_CORRUPTION);
-
 	dump_stack();
 	add_taint(TAINT_BAD_PAGE);
 }
@@ -2994,7 +2990,6 @@ static int do_swap_page(struct mm_struct *mm, struct vm_area_struct *vma,
 	delayacct_set_flag(DELAYACCT_PF_SWAPIN);
 	page = lookup_swap_cache(entry);
 	if (!page) {
-		grab_swap_token(mm); /* Contend for token _before_ read-in */
 		page = swapin_readahead(entry,
 					GFP_HIGHUSER_MOVABLE, vma, address);
 		if (!page) {

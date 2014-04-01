@@ -884,7 +884,7 @@ void __init gic_init_bases(unsigned int gic_nr, int irq_start,
 		gic->dist_base.percpu_base = alloc_percpu(void __iomem *);
 		gic->cpu_base.percpu_base = alloc_percpu(void __iomem *);
 		if (WARN_ON(!gic->dist_base.percpu_base ||
-			     !gic->cpu_base.percpu_base)) {
+			    !gic->cpu_base.percpu_base)) {
 			free_percpu(gic->dist_base.percpu_base);
 			free_percpu(gic->cpu_base.percpu_base);
 			return;

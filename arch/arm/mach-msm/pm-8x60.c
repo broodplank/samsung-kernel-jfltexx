@@ -81,6 +81,7 @@ module_param_named(
 	debug_mask, msm_pm_debug_mask, int, S_IRUGO | S_IWUSR | S_IWGRP
 );
 static int msm_pm_retention_tz_call;
+static struct msm_pm_sleep_status_data *msm_pm_slp_sts;
 
 /******************************************************************************
  * Sleep Modes and Parameters

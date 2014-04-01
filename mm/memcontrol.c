@@ -57,6 +57,15 @@
 
 #include <trace/events/vmscan.h>
 
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+#include <linux/swap.h>
+
+#define MAX_SCAN_NO 2048
+#define SOFT_RECLAIM_ONETIME 1024
+#define HIDDEN_CGROUP_NAME	"hidden"
+#define RTCC_CGROUP_NAME	"rtcc"
+#endif
+
 struct cgroup_subsys mem_cgroup_subsys __read_mostly;
 #define MEM_CGROUP_RECLAIM_RETRIES	5
 struct mem_cgroup *root_mem_cgroup __read_mostly;
@@ -76,6 +85,10 @@ static int really_do_swap_account __initdata = 0;
 #define do_swap_account		(0)
 #endif
 
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+extern void need_soft_reclaim(void);
+extern int hidden_cgroup_counter;
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 /*
  * Statistics for memory cgroup.
@@ -1116,11 +1129,6 @@ void mem_cgroup_lru_del_list(struct page *page, enum lru_list lru)
 	mz->lru_size[lru] -= 1 << compound_order(page);
 }
 
-void mem_cgroup_lru_del(struct page *page)
-{
-	mem_cgroup_lru_del_list(page, page_lru(page));
-}
-
 /**
  * mem_cgroup_lru_move_lists - account for moving a page between lrus
  * @zone: zone of the page
@@ -1149,17 +1157,23 @@ struct lruvec *mem_cgroup_lru_move_lists(struct zone *zone,
  * Checks whether given mem is same or in the root_mem_cgroup's
  * hierarchy subtree
  */
-static bool mem_cgroup_same_or_subtree(const struct mem_cgroup *root_memcg,
-		struct mem_cgroup *memcg)
+bool __mem_cgroup_same_or_subtree(const struct mem_cgroup *root_memcg,
+				  struct mem_cgroup *memcg)
 {
-	bool ret;
-
 	if (root_memcg == memcg)
 		return true;
 	if (!root_memcg->use_hierarchy)
 		return false;
+	return css_is_ancestor(&memcg->css, &root_memcg->css);
+}
+
+static bool mem_cgroup_same_or_subtree(const struct mem_cgroup *root_memcg,
+				       struct mem_cgroup *memcg)
+{
+	bool ret;
+
 	rcu_read_lock();
-	ret = css_is_ancestor(&memcg->css, &root_memcg->css);
+	ret = __mem_cgroup_same_or_subtree(root_memcg, memcg);
 	rcu_read_unlock();
 	return ret;
 }
@@ -1731,9 +1745,17 @@ static int mem_cgroup_soft_reclaim(struct mem_cgroup *root_memcg,
 		}
 		if (!mem_cgroup_reclaimable(victim, false))
 			continue;
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+		if(nr_swap_pages <= SOFT_RECLAIM_ONETIME)
+			break;
+#endif
 		total += mem_cgroup_shrink_node_zone(victim, gfp_mask, false,
 						     zone, &nr_scanned);
 		*total_scanned += nr_scanned;
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+		if(*total_scanned > MAX_SCAN_NO)
+			break;
+#endif
 		if (!res_counter_soft_limit_excess(&root_memcg->res))
 			break;
 	}
@@ -5430,6 +5452,52 @@ static void mem_cgroup_clear_mc(void)
 	spin_unlock(&mc.lock);
 	mem_cgroup_end_move(from);
 }
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+static struct mem_cgroup *rtcc_memcgrp = NULL;
+static struct mem_cgroup *hidden_memcgrp = NULL;
+static struct cgroup *get_compcache_group(const char *grp_name)
+{
+	struct cgroup_subsys_state *css = NULL;
+	int found = 0;
+	int nextid;
+
+	rcu_read_lock();
+
+	for (nextid = 0; nextid < 4; nextid++) {
+		css = css_get_next(&mem_cgroup_subsys, nextid, &root_mem_cgroup->css, &found);
+		if (!css)
+			break;
+		if (!strcmp(css->cgroup->dentry->d_iname, grp_name))
+			goto out;
+	}
+
+	rcu_read_unlock();
+	return NULL;
+
+out:
+	rcu_read_unlock();
+	return css->cgroup;
+}
+
+static struct mem_cgroup *get_compcache_memgrp(void)
+{
+	struct cgroup *cg= get_compcache_group(RTCC_CGROUP_NAME);
+	if (!cg)
+		return NULL;
+
+	return (mem_cgroup_from_cont(cg));
+}
+
+static struct mem_cgroup *get_hiddencgrp_memgrp(void)
+{
+	struct cgroup *cg= get_compcache_group(HIDDEN_CGROUP_NAME);
+	if (!cg)
+		return NULL;
+
+	return (mem_cgroup_from_cont(cg));
+}
+
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 static int mem_cgroup_can_attach(struct cgroup *cgroup,
 				 struct cgroup_taskset *tset)
@@ -5437,6 +5505,17 @@ static int mem_cgroup_can_attach(struct cgroup *cgroup,
 	struct task_struct *p = cgroup_taskset_first(tset);
 	int ret = 0;
 	struct mem_cgroup *memcg = mem_cgroup_from_cont(cgroup);
+
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+	if (hidden_memcgrp == memcg) {
+		hidden_cgroup_counter ++;
+	} else if (hidden_memcgrp == NULL) {
+		hidden_memcgrp = get_hiddencgrp_memgrp();
+		if (hidden_memcgrp == memcg) {
+			hidden_cgroup_counter ++;
+		}
+	}
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
 
 	if (memcg->move_charge_at_immigrate) {
 		struct mm_struct *mm;
@@ -5629,9 +5708,18 @@ static void mem_cgroup_move_task(struct cgroup *cont,
 	if (mm) {
 		if (mc.to)
 			mem_cgroup_move_charge(mm);
-		put_swap_token(mm);
 		mmput(mm);
 	}
+
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+	if (mc.to && rtcc_memcgrp == mc.to) {
+		need_soft_reclaim();
+	}
+	else if (rtcc_memcgrp == NULL) {
+		rtcc_memcgrp = get_compcache_memgrp();
+	}
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
+
 	if (mc.to)
 		mem_cgroup_clear_mc();
 }

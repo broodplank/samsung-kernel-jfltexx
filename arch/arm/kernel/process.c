@@ -38,6 +38,7 @@
 #include <asm/thread_notify.h>
 #include <asm/stacktrace.h>
 #include <asm/mach/time.h>
+#include <asm/tls.h>
 
 #ifdef CONFIG_CC_STACKPROTECTOR
 #include <linux/stackprotector.h>
@@ -242,6 +243,10 @@ static void default_idle(void)
 void (*pm_idle)(void) = default_idle;
 EXPORT_SYMBOL(pm_idle);
 
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+extern void could_cswap(void);
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
+
 /*
  * The idle thread, has rather strange semantics for calling pm_idle,
  * but this is what x86 does and we need to do the same, so that
@@ -258,6 +263,11 @@ void cpu_idle(void)
 		tick_nohz_idle_enter();
 		rcu_idle_enter();
 		while (!need_resched()) {
+
+#ifdef CONFIG_ZRAM_FOR_ANDROID
+			could_cswap();
+#endif /* CONFIG_ZRAM_FOR_ANDROID */
+
 			/*
 			 * We need to disable interrupts here
 			 * to ensure we don't miss a wakeup call.
@@ -565,7 +575,8 @@ copy_thread(unsigned long clone_flags, unsigned long stack_start,
 	clear_ptrace_hw_breakpoint(p);
 
 	if (clone_flags & CLONE_SETTLS)
-		thread->tp_value = regs->ARM_r3;
+		thread->tp_value[0] = childregs->ARM_r3;
+	thread->tp_value[1] = get_tpuser();
 
 	thread_notify(THREAD_NOTIFY_COPY, thread);
 
@@ -684,6 +695,7 @@ unsigned long arch_randomize_brk(struct mm_struct *mm)
 }
 
 #ifdef CONFIG_MMU
+#ifdef CONFIG_KUSER_HELPERS
 /*
  * The vectors page is always readable from user space for the
  * atomic helpers and the signal restart code. Insert it into the
@@ -716,10 +728,14 @@ int in_gate_area_no_mm(unsigned long addr)
 {
 	return in_gate_area(NULL, addr);
 }
+#define is_gate_vma(vma)	((vma) = &gate_vma)
+#else
+#define is_gate_vma(vma)	0
+#endif
 
 const char *arch_vma_name(struct vm_area_struct *vma)
 {
-	if (vma == &gate_vma)
+	if (is_gate_vma(vma))
 		return "[vectors]";
 	else if (vma == get_user_timers_vma(NULL))
 		return "[timers]";

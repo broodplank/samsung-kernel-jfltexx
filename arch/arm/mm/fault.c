@@ -33,9 +33,6 @@
 
 #include "fault.h"
 
-#define CREATE_TRACE_POINTS
-#include <trace/events/exception.h>
-
 #ifdef CONFIG_MMU
 
 #ifdef CONFIG_KPROBES
@@ -131,8 +128,7 @@ void show_pte(struct mm_struct *mm, unsigned long addr)
 #else					/* CONFIG_MMU */
 void show_pte(struct mm_struct *mm, unsigned long addr)
 { }
-#endif
-					/* CONFIG_MMU */
+#endif					/* CONFIG_MMU */
 
 /*
  * Oops.  The kernel tried to access some page that wasn't present.
@@ -172,8 +168,6 @@ __do_user_fault(struct task_struct *tsk, unsigned long addr,
 		struct pt_regs *regs)
 {
 	struct siginfo si;
-
-	trace_user_fault(tsk, addr, fsr);
 
 #ifdef CONFIG_DEBUG_USER
 	if (((user_debug & UDBG_SEGV) && (sig == SIGSEGV)) ||
