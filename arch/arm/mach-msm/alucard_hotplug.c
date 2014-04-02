@@ -574,7 +574,6 @@ static void hotplug_work_fn(struct work_struct *work)
 	unsigned int sampling_rate=0;
 	int delay;
 	int cpus_off[4] = {-1, -1, -1, -1};
-	int cpus_on[4] = {-1, -1, -1, -1};
 	int idx_off = 0;
 
 	mutex_lock(&timer_mutex);
@@ -660,28 +659,38 @@ static void hotplug_work_fn(struct work_struct *work)
 				printk(KERN_ERR "U CPU[%u], cur_freq[%u], up_freq[%u], cur_load[%d], up_load[%d], offline_cpu[%d], schedule_up_cpu[%d]\n",cpu, cur_freq, up_freq, cur_load, up_load, offline_cpu, schedule_up_cpu);
 				printk(KERN_ERR "D CPU[%u], cur_freq[%u], down_freq[%u], cur_load[%d], down_load[%d], schedule_down_cpu[%d]\n",cpu, cur_freq, down_freq, cur_load, down_load, schedule_down_cpu);*/
 
-				if (check_up
-					&& online_cpus < upmaxcoreslimit
-					&& this_hotplug_cpuinfo->up_cpu > 0
-					&& schedule_up_cpu > 0
-					&& cur_load >= up_load
-					&& cur_freq >= up_freq
-					&& rq_avg > up_rq) {
-						if (offline_cpu < idx_off 
-							&& cpus_off[offline_cpu] > 0) {
-								ref_hotplug_cpuinfo = &per_cpu(od_hotplug_cpuinfo, cpus_off[offline_cpu]);
-								ref_hotplug_cpuinfo->online = true;
-								ref_hotplug_cpuinfo->up_by_cpu = cpu;
-								this_hotplug_cpuinfo->up_cpu = 0;
-								++offline_cpu;
-								--schedule_up_cpu;
-						}
+				if (online_cpus - online_cpu > upmaxcoreslimit) {
+					ref_cpu = this_hotplug_cpuinfo->up_by_cpu;
+					if (ref_cpu >= 0) {
+						ref_hotplug_cpuinfo = &per_cpu(od_hotplug_cpuinfo, ref_cpu);
+						ref_hotplug_cpuinfo->up_cpu = 1;
+					}
+					this_hotplug_cpuinfo->online = false;
+					this_hotplug_cpuinfo->up_cpu = 1;
+					this_hotplug_cpuinfo->up_by_cpu = -1;
+					++online_cpu;
+					--schedule_down_cpu;
+				} else if (check_up
+							&& online_cpus < upmaxcoreslimit
+							&& this_hotplug_cpuinfo->up_cpu > 0
+							&& schedule_up_cpu > 0
+							&& cur_load >= up_load
+							&& cur_freq >= up_freq
+							&& rq_avg > up_rq) {
+								if (offline_cpu < idx_off 
+									&& cpus_off[offline_cpu] > 0) {
+										ref_hotplug_cpuinfo = &per_cpu(od_hotplug_cpuinfo, cpus_off[offline_cpu]);
+										ref_hotplug_cpuinfo->online = true;
+										ref_hotplug_cpuinfo->up_by_cpu = cpu;
+										this_hotplug_cpuinfo->up_cpu = 0;
+										++offline_cpu;
+										--schedule_up_cpu;
+								}
 						
-				} else if ((online_cpus > upmaxcoreslimit)
-							|| (check_down
-								&& cpu > 0
-								&& schedule_down_cpu > 0
-								&& cur_load >= 0)) {
+				} else if (check_down
+							&& cpu > 0
+							&& schedule_down_cpu > 0
+							&& cur_load >= 0) {
 								if (cur_load < down_load
 									|| (cur_freq <= down_freq
 										&& rq_avg <= down_rq)) {
@@ -693,7 +702,6 @@ static void hotplug_work_fn(struct work_struct *work)
 										this_hotplug_cpuinfo->online = false;
 										this_hotplug_cpuinfo->up_cpu = 1;
 										this_hotplug_cpuinfo->up_by_cpu = -1;
-										cpus_on[online_cpu] = cpu;
 										++online_cpu;
 										--schedule_down_cpu;
 								}
