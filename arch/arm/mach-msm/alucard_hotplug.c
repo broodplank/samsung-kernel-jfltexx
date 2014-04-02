@@ -788,6 +788,10 @@ static int __init alucard_hotplug_init(void)
 
 	alucardhp_wq = alloc_workqueue("alucardhp_wq_efficient",
 					      WQ_POWER_EFFICIENT, 0);
+	if (!alucardhp_wq) {
+		printk(KERN_ERR "Failed to create alucardhp_wq_efficient workqueue\n");
+		return -EFAULT;
+	}
 
 	ret = init_rq_avg();
 	if (ret) {
@@ -835,6 +839,8 @@ static void __exit alucard_hotplug_exit(void)
 	stop_rq_work();
 
 	mutex_destroy(&timer_mutex);
+
+	destroy_workqueue(alucardhp_wq);
 
 	sysfs_remove_group(kernel_kobj, &alucard_hotplug_attr_group);
 }

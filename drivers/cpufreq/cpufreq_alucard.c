@@ -72,6 +72,8 @@ static unsigned int alucard_enable;	/* number of CPUs using this policy */
  */
 static DEFINE_MUTEX(alucard_mutex);
 
+static struct workqueue_struct *alucard_wq;
+
 /* alucard tuners */
 static struct alucard_tuners {
 	atomic_t sampling_rate;
@@ -160,7 +162,7 @@ static void update_sampling_rate(unsigned int new_rate)
 			cancel_delayed_work_sync(&alucard_cpuinfo->work);
 			mutex_lock(&alucard_cpuinfo->timer_mutex);
 
-			queue_delayed_work_on(alucard_cpuinfo->cpu, system_wq, &alucard_cpuinfo->work, usecs_to_jiffies(new_rate));
+			queue_delayed_work_on(alucard_cpuinfo->cpu, alucard_wq, &alucard_cpuinfo->work, usecs_to_jiffies(new_rate));
 		}
 		mutex_unlock(&alucard_cpuinfo->timer_mutex);
 	}
@@ -480,7 +482,7 @@ static void do_alucard_timer(struct work_struct *work)
 	if (need_load_eval(alucard_cpuinfo, sampling_rate))
 		alucard_check_cpu(alucard_cpuinfo);
 
-	queue_delayed_work_on(cpu, system_wq, &alucard_cpuinfo->work, delay);
+	queue_delayed_work_on(cpu, alucard_wq, &alucard_cpuinfo->work, delay);
 	mutex_unlock(&alucard_cpuinfo->timer_mutex);
 }
 
@@ -536,7 +538,7 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 
 		this_alucard_cpuinfo->enable = 1;
 		INIT_DEFERRABLE_WORK(&this_alucard_cpuinfo->work, do_alucard_timer);
-		queue_delayed_work_on(this_alucard_cpuinfo->cpu, system_wq, &this_alucard_cpuinfo->work, delay);
+		queue_delayed_work_on(this_alucard_cpuinfo->cpu, alucard_wq, &this_alucard_cpuinfo->work, delay);
 
 		break;
 
@@ -573,11 +575,19 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 
 static int __init cpufreq_gov_alucard_init(void)
 {
+	alucard_wq = alloc_workqueue("alucard_wq_efficient",
+					      WQ_POWER_EFFICIENT, 0);
+	if (!alucard_wq) {
+		printk(KERN_ERR "Failed to create alucard_wq_efficient workqueue\n");
+		return -EFAULT;
+	}
+
 	return cpufreq_register_governor(&cpufreq_gov_alucard);
 }
 
 static void __exit cpufreq_gov_alucard_exit(void)
 {
+	destroy_workqueue(alucard_wq);
 	cpufreq_unregister_governor(&cpufreq_gov_alucard);
 }
 
