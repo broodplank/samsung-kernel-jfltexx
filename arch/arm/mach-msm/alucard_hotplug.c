@@ -162,10 +162,10 @@ static unsigned int get_nr_run_avg(void)
 static unsigned hotplugging_rate = 0;
 
 static atomic_t hotplug_freq[4][2] = {
-	{ATOMIC_INIT(0), ATOMIC_INIT(1267200)},
-	{ATOMIC_INIT(960000), ATOMIC_INIT(1497600)},
-	{ATOMIC_INIT(1036800), ATOMIC_INIT(1728000)},
-	{ATOMIC_INIT(1190400), ATOMIC_INIT(0)}
+	{ATOMIC_INIT(0), ATOMIC_INIT(702000)},
+	{ATOMIC_INIT(486000), ATOMIC_INIT(702000)},
+	{ATOMIC_INIT(486000), ATOMIC_INIT(702000)},
+	{ATOMIC_INIT(486000), ATOMIC_INIT(0)}
 };
 static atomic_t hotplug_load[4][2] = {
 	{ATOMIC_INIT(0), ATOMIC_INIT(65)},
@@ -588,8 +588,7 @@ static void hotplug_work_fn(struct work_struct *work)
 
 	mutex_lock(&timer_mutex);
 
-	sampling_rate = max(10,
-		atomic_read(&hotplug_tuners_ins.hotplug_sampling_rate));
+	sampling_rate = atomic_read(&hotplug_tuners_ins.hotplug_sampling_rate);
 	delay = msecs_to_jiffies(sampling_rate);
 	/* set hotplugging_rate used */
 	++hotplugging_rate;
