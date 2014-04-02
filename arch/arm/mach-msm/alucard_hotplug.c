@@ -677,25 +677,26 @@ static void hotplug_work_fn(struct work_struct *work)
 								--schedule_up_cpu;
 						}
 						
-				} else if (check_down
-					&& cpu > 0
-					&& schedule_down_cpu > 0
-					&& cur_load >= 0) {
-						if (cur_load < down_load
-							|| (cur_freq <= down_freq
-								&& rq_avg <= down_rq)) {
-								ref_cpu = this_hotplug_cpuinfo->up_by_cpu;
-								if (ref_cpu >= 0) {
-									ref_hotplug_cpuinfo = &per_cpu(od_hotplug_cpuinfo, ref_cpu);
-									ref_hotplug_cpuinfo->up_cpu = 1;
+				} else if ((online_cpus > upmaxcoreslimit)
+							|| (check_down
+								&& cpu > 0
+								&& schedule_down_cpu > 0
+								&& cur_load >= 0)) {
+								if (cur_load < down_load
+									|| (cur_freq <= down_freq
+										&& rq_avg <= down_rq)) {
+										ref_cpu = this_hotplug_cpuinfo->up_by_cpu;
+										if (ref_cpu >= 0) {
+											ref_hotplug_cpuinfo = &per_cpu(od_hotplug_cpuinfo, ref_cpu);
+											ref_hotplug_cpuinfo->up_cpu = 1;
+										}
+										this_hotplug_cpuinfo->online = false;
+										this_hotplug_cpuinfo->up_cpu = 1;
+										this_hotplug_cpuinfo->up_by_cpu = -1;
+										cpus_on[online_cpu] = cpu;
+										++online_cpu;
+										--schedule_down_cpu;
 								}
-								this_hotplug_cpuinfo->online = false;
-								this_hotplug_cpuinfo->up_cpu = 1;
-								this_hotplug_cpuinfo->up_by_cpu = -1;
-								cpus_on[online_cpu] = cpu;
-								++online_cpu;
-								--schedule_down_cpu;
-						}
 				}
 		}
 	}

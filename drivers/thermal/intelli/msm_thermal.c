@@ -41,7 +41,7 @@ static struct msm_thermal_stat_data msm_thermal_stats;
 
 static int enabled;
 static struct msm_thermal_data msm_thermal_info = {
-	.sensor_id = 7,
+	.sensor_id = 0,
 	.poll_ms = 250,
 	.limit_temp_degC = 70,
 	.temp_hysteresis_degC = 10,
@@ -98,7 +98,11 @@ static int msm_thermal_get_freq_table(void)
 	while (table[i].frequency != CPUFREQ_TABLE_END)
 		i++;
 
+#ifdef CONFIG_LOW_CPUCLOCKS
+	limit_idx_low = 2; // 378000
+#else
 	limit_idx_low = 0;
+#endif
 	limit_idx_high = limit_idx = i - 1;
 	BUG_ON(limit_idx_high <= 0 || limit_idx_high <= limit_idx_low);
 fail:
@@ -198,6 +202,8 @@ static void __ref do_freq_control(long temp)
 	if (msm_thermal_info.limit_temp_degC > 75)
 		msm_thermal_info.limit_temp_degC = 75;
 
+	//printk(KERN_ERR "pre-check do_freq_control temp[%u], limit_idx[%u], limit_idx_low[%u], limited_idx_high[%u]\n", temp, limit_idx, limit_idx_low, limit_idx_high);
+
 	if (temp >= msm_thermal_info.limit_temp_degC) {
 		if (limit_idx == limit_idx_low)
 			return;
@@ -218,6 +224,8 @@ static void __ref do_freq_control(long temp)
 		} else
 			max_freq = table[limit_idx].frequency;
 	}
+
+	//printk(KERN_ERR "do_freq_control temp[%u], limit_idx[%u], max_freq[%u], limited_max_freq_thermal[%u]\n", temp, limit_idx, max_freq, limited_max_freq_thermal);
 
 	if (max_freq == limited_max_freq_thermal)
 		return;
@@ -589,7 +597,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 	if (num_possible_cpus() > 1)
 		core_control_enabled = 1;
 	intellithermal_wq = alloc_workqueue("intellithermal",
-				WQ_UNBOUND | WQ_MEM_RECLAIM, 1);
+				WQ_UNBOUND | WQ_MEM_RECLAIM, 0);
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
 	queue_delayed_work(intellithermal_wq, &check_temp_work, 0);
 

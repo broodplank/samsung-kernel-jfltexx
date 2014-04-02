@@ -603,7 +603,7 @@ void set_scaling_max_gps_freq(unsigned int max_freq)
 
 	slength = sprintf(buf, "%u", max_freq);
 	if (slength > 0) {
-		main_policy = per_cpu(cpufreq_cpu_data, 0);
+		main_policy = &per_cpu(cpufreq_cpu_data, 0);
 		if (!main_policy)
 			return;
 		store_scaling_max_freq_all_cpus(main_policy, buf, count);
@@ -2276,7 +2276,7 @@ static int __cpuinit cpufreq_cpu_callback(struct notifier_block *nfb,
 					if (max_freq && target_freq > max_freq)
 						target_freq = max_freq;
 
-					if (target_freq != policy->cur && target_freq >= policy->min && target_freq <= policy->max)
+					if (target_freq != policy->cur)
 						__cpufreq_driver_target(policy, target_freq, CPUFREQ_RELATION_L);
 
 					cpufreq_cpu_put(policy);
