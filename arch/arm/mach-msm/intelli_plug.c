@@ -520,9 +520,6 @@ static void __cpuinit intelli_plug_late_resume(struct early_suspend *handler)
 		for (i = 1; i < num_of_active_cores; i++) {
 			cpu_up(i);
 		}
-		if (!delayed_work_pending(&intelli_plug_work))
-			queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
-				msecs_to_jiffies(sampling_time_on));
 	}
 }
 
