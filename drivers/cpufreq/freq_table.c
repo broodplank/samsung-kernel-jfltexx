@@ -70,9 +70,9 @@ int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 		if (freq == CPUFREQ_ENTRY_INVALID)
 			continue;
 		if ((freq >= policy->min) && (freq <= policy->max)) {
- 			found = true;
- 			break;
- 		}
+			found = true;
+			break;
+		}
 
 		if ((next_larger > freq) && (freq > policy->max))
 			next_larger = freq;
@@ -80,8 +80,9 @@ int cpufreq_frequency_table_verify(struct cpufreq_policy *policy,
 
 	if (!found) {
 		policy->max = next_larger;
+
 		cpufreq_verify_within_limits(policy, policy->cpuinfo.min_freq,
- 				policy->cpuinfo.max_freq);
+				policy->cpuinfo.max_freq);
 	}
 
 	pr_debug("verification lead to (%u - %u kHz) for cpu %u\n",

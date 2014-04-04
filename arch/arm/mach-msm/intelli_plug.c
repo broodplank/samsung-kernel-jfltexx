@@ -32,7 +32,7 @@
 #endif  /* CONFIG_POWERSUSPEND || CONFIG_HAS_EARLYSUSPEND */
 
 #define INTELLI_PLUG_MAJOR_VERSION	3
-#define INTELLI_PLUG_MINOR_VERSION	1
+#define INTELLI_PLUG_MINOR_VERSION	2
 
 #define DEF_SAMPLING_MS			(40)
 #define BUSY_SAMPLING_MS		(20)
@@ -462,7 +462,8 @@ static void __cpuinit intelli_plug_work_fn(struct work_struct *work)
 					nr_run_stat);
 			break;
 		}
-	}
+	} else if (debug_intelli_plug)
+		pr_info("intelli_plug is suspened!\n");
 
 	queue_delayed_work_on(0, intelliplug_wq, &intelli_plug_work,
 		msecs_to_jiffies(sampling_time));
@@ -555,10 +556,16 @@ static int __init intelli_plug_init(void)
 #endif
 #endif  /* CONFIG_POWERSUSPEND || CONFIG_HAS_EARLYSUSPEND */
 
+#ifdef CONFIG_MACH_LGE
 	intelliplug_wq = alloc_workqueue("intelliplug",
-							WQ_POWER_EFFICIENT, 0);
+				WQ_HIGHPRI | WQ_UNBOUND, 1);
+#else
+	intelliplug_wq = alloc_workqueue("intelliplug",
+				WQ_HIGHPRI | WQ_UNBOUND, 0);
+#endif
+
 	if (!intelliplug_wq) {
-		printk(KERN_ERR "Failed to create intelliplug_wq \
+		printk(KERN_ERR "Failed to create intelliplug \
 				workqueue\n");
 		return -EFAULT;
 	}
