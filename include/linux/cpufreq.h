@@ -114,14 +114,8 @@ struct cpufreq_policy {
 
 	struct cpufreq_real_policy	user_policy;
 
-	struct kobject		*kobj;
+	struct kobject		kobj;
 	struct completion	kobj_unregister;
-};
-
-/* contains per cpu sysfs info ./sys/devices/ssytem/cpu/cpu#/cpufreq */
-struct cpufreq_cpu_sysinfo {
-	struct cpufreq_policy *cpu_policy; /* policy for online cpu */
-	struct kobject cpu_kobj; /* per cpu kobject */
 };
 
 #define CPUFREQ_ADJUST		(0)
@@ -395,7 +389,6 @@ enum {
 	DVFS_MAX_ID
 };
 
-
 int set_freq_limit(unsigned long id, unsigned int freq);
 
 unsigned int get_min_lock(void);
@@ -450,7 +443,6 @@ extern struct cpufreq_governor cpufreq_gov_HYPER;
 extern struct cpufreq_governor cpufreq_gov_pegasusq;
 #define CPUFREQ_DEFAULT_GOVERNOR	(&cpufreq_gov_pegasusq)
 #endif
-
 
 /*********************************************************************
  *                     FREQUENCY TABLE HELPERS                       *
