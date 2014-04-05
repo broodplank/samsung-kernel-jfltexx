@@ -824,7 +824,8 @@ static void hotplug_work_fn(struct work_struct *work)
 				schedule_down_cpu);
 #endif
 
-			if ((online_cpus - online_cpu) > upmaxcoreslimit) {
+			if (cpu > 0
+					&& (online_cpus - online_cpu) > upmaxcoreslimit) {
 				ref_cpu = this_hotplug_cpuinfo->up_by_cpu;
 				if (ref_cpu >= 0) {
 					ref_hotplug_cpuinfo =
