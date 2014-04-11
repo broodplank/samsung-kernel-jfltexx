@@ -13,12 +13,12 @@
  *
  */
 #include "ssp.h"
+#include <mach/cpufreq.h>
 
 #define LIMIT_DELAY_CNT		200
 #define MIN_FREQ	810000
 #define MAX_FREQ	1890000
 
-extern void set_scaling_max_gps_freq(unsigned int max_freq);
 static unsigned int scaling_max_gps_freq = MAX_FREQ;
 module_param(scaling_max_gps_freq, uint, 0644);
 static bool gps_status = false;
@@ -256,7 +256,7 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	if (gps_status != previous_gps_status) {
 		previous_gps_status = gps_status;
 		scaling_max_gps_freq = min(max(scaling_max_gps_freq, MIN_FREQ), MAX_FREQ);
-		set_scaling_max_gps_freq(gps_status ? scaling_max_gps_freq : MAX_FREQ);
+		msm_cpufreq_set_freq_limits(0, MSM_CPUFREQ_NO_LIMIT, gps_status ? scaling_max_gps_freq : MAX_FREQ);
 	}
 
 	data->uInstFailCnt = 0;
