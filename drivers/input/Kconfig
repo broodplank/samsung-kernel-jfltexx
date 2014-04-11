@@ -176,6 +176,7 @@ config INPUT_KEYRESET
 
 config DVFS_TOUCH_INTERFACE
 	bool "DVFS Touch Interface"
+	depends on SEC_DVFS_BOOSTER
 	default y
 	help
 	  A simple sysfs interface to manage
