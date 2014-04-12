@@ -50,10 +50,6 @@ struct cpufreq_cpu_save_data {
 static DEFINE_PER_CPU(struct cpufreq_cpu_save_data, cpufreq_policy_save);
 #endif
 static DEFINE_SPINLOCK(cpufreq_driver_lock);
-static DEFINE_MUTEX(cpufreq_governor_lock);
-
-static struct kset *cpufreq_kset;
-static struct kset *cpudev_kset;
 
 /*
  * cpu_policy_rwsem is a per CPU reader-writer semaphore designed to cure
@@ -578,8 +574,6 @@ static ssize_t store_scaling_governor(struct cpufreq_policy *policy,
 
 	sysfs_notify(&policy->kobj, NULL, "scaling_governor");
 
-	kobject_uevent(cpufreq_global_kobject, KOBJ_ADD);
-
 	if (ret)
 		return ret;
 	else
@@ -1015,16 +1009,6 @@ static int cpufreq_add_dev_interface(unsigned int cpu,
 	if (ret)
 		return ret;
 
-	/* create cpu device kset */
-	if (!cpudev_kset) {
-		cpudev_kset = kset_create_and_add("kset", NULL, &dev->kobj);
-		BUG_ON(!cpudev_kset);
-		dev->kobj.kset = cpudev_kset;
-	}
-
-	/* send uevent when cpu device is added */
-	kobject_uevent(&dev->kobj, KOBJ_ADD);
-
 	/* set up files for this cpu device */
 	drv_attr = cpufreq_driver->attr;
 	while ((drv_attr) && (*drv_attr)) {
@@ -1169,9 +1153,6 @@ static int cpufreq_add_dev(struct device *dev, struct subsys_interface *sif)
 		pr_debug("initialization failed\n");
 		goto err_unlock_policy;
 	}
-
-	/* related cpus should atleast have policy->cpus */
-	cpumask_or(policy->related_cpus, policy->related_cpus, policy->cpus);
 
 	/*
 	 * affected cpus must always be the one, which are online. We aren't
@@ -1781,37 +1762,7 @@ static int __cpufreq_governor(struct cpufreq_policy *policy,
 
 	pr_debug("__cpufreq_governor for CPU %u, event %u\n",
 						policy->cpu, event);
- 
- 	mutex_lock(&cpufreq_governor_lock); 
-		if ((!policy->governor_enabled && (event == CPUFREQ_GOV_STOP)) || 
-			(policy->governor_enabled && (event == CPUFREQ_GOV_START))) { 
-	mutex_unlock(&cpufreq_governor_lock); 
-		return -EBUSY; 
-}
-
-		if (event == CPUFREQ_GOV_STOP) 
-			policy->governor_enabled = false; 
-		else if (event == CPUFREQ_GOV_START) 
-			policy->governor_enabled = true; 
-
-	mutex_unlock(&cpufreq_governor_lock);
-
 	ret = policy->governor->governor(policy, event);
-
-        if (!ret) {
-               if (event == CPUFREQ_GOV_POLICY_INIT)
-                        policy->governor->initialized++;
-                else if (event == CPUFREQ_GOV_POLICY_EXIT)
-                        policy->governor->initialized--;
-        } else {
-                /* Restore original values */
-                mutex_lock(&cpufreq_governor_lock);
-                if (event == CPUFREQ_GOV_STOP)
-                        policy->governor_enabled = true;
-                else if (event == CPUFREQ_GOV_START)
-                        policy->governor_enabled = false;
-                mutex_unlock(&cpufreq_governor_lock);
-        }
 
 	/* we keep one module reference alive for
 			each CPU governed by this CPU */
@@ -1836,7 +1787,6 @@ int cpufreq_register_governor(struct cpufreq_governor *governor)
 
 	mutex_lock(&cpufreq_governor_mutex);
 
-	governor->initialized = 0;
 	err = -EBUSY;
 	if (__find_governor(governor->name) == NULL) {
 		err = 0;
@@ -2253,12 +2203,6 @@ static int __init cpufreq_core_init(void)
 
 	cpufreq_global_kobject = kobject_create_and_add("cpufreq", &cpu_subsys.dev_root->kobj);
 	BUG_ON(!cpufreq_global_kobject);
-
-	/* create cpufreq kset */
-	cpufreq_kset = kset_create_and_add("kset", NULL, cpufreq_global_kobject);
-	BUG_ON(!cpufreq_kset);
-	cpufreq_global_kobject->kset = cpufreq_kset;
-
 	register_syscore_ops(&cpufreq_syscore_ops);
 #ifdef CONFIG_CPU_VOLTAGE_TABLE
 	rc = sysfs_create_group(cpufreq_global_kobject, &vddtbl_attr_group);
