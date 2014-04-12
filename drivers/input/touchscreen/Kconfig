@@ -996,5 +996,13 @@ config TOUCH_REG_MAP_TM2000
 	default y
 	help
 	  Synaptics Register map TM2000.
+
+config TOUCH_BOOSTER
+	bool "Touch Booster Interface"
+	depends on !SEC_DVFS_BOOSTER
+	default y
+	help
+	  A simple sysfs interface to manage
+          touch booster manually.
 endif
 

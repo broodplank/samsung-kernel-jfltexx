@@ -79,3 +79,4 @@ obj-$(CONFIG_TOUCHSCREEN_ATMEL_MXTS)	+= mxts.o
 obj-$(CONFIG_TOUCHSCREEN_LGE_COMMON)	+= lge_touch_core.o
 obj-$(CONFIG_TOUCHSCREEN_LGE_SYNAPTICS) += touch_synaptics.o
 obj-$(CONFIG_TOUCHSCREEN_LGE_SYNAPTICS) += touch_synaptics_ds4_fw_upgrade.o
+obj-$(CONFIG_TOUCH_BOOSTER) += touchboost.o
