@@ -35,15 +35,15 @@
 
 /* User tunabble controls */
 #define DEF_FREQUENCY_DOWN_DIFFERENTIAL		(10)
-#define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(10)
+#define MICRO_FREQUENCY_DOWN_DIFFERENTIAL	(3)
 
-#define DEF_FREQUENCY_UP_THRESHOLD		(70)
-#define DEF_FREQUENCY_UP_THRESHOLD_ANY_CPU	(70)
-#define DEF_FREQUENCY_UP_THRESHOLD_MULTI_CORE	(70)
-#define MICRO_FREQUENCY_UP_THRESHOLD		(80)
+#define DEF_FREQUENCY_UP_THRESHOLD		(75)
+#define DEF_FREQUENCY_UP_THRESHOLD_ANY_CPU	(75)
+#define DEF_FREQUENCY_UP_THRESHOLD_MULTI_CORE	(80)
+#define MICRO_FREQUENCY_UP_THRESHOLD		(85)
 
-#define DEF_SAMPLING_DOWN_FACTOR		(5)
-#define DEF_SAMPLING_RATE			(6 * 10000)
+#define DEF_SAMPLING_DOWN_FACTOR		(2)
+#define DEF_SAMPLING_RATE			(60000)
 
 /* Kernel tunabble controls */
 #define MICRO_FREQUENCY_MIN_SAMPLE_RATE		(10000)
@@ -55,7 +55,7 @@
 /* PATCH : SMART_UP */
 #define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
 
-#define SMART_UP_PLUS (0)
+#define SMART_UP_PLUS (1)
 #define SMART_UP_SLOW_UP_AT_HIGH_FREQ (1)
 #define SUP_MAX_STEP (3)
 #define SUP_CORE_NUM (4)
@@ -69,7 +69,7 @@ static unsigned int min_range = 108000;
 #endif
 
 #if defined(SMART_UP_SLOW_UP_AT_HIGH_FREQ)
-#define SUP_SLOW_UP_FREQUENCY		(1890000)
+#define SUP_SLOW_UP_FREQUENCY		(1782000)
 #define SUP_SLOW_UP_LOAD			(80)
 
 typedef struct {
@@ -100,7 +100,7 @@ static unsigned int min_sampling_rate;
 
 #define POWERSAVE_BIAS_MAXLEVEL			(1000)
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
-unsigned int ondemand_current_sampling_rate;
+unsigned int ondemand_current_sampling_rate = DEF_SAMPLING_RATE;
 
 static void do_dbs_timer(struct work_struct *work);
 static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
@@ -223,14 +223,6 @@ static inline u64 get_cpu_iowait_time(unsigned int cpu, u64 *wall)
 }
 
 /*
- * Find right sampling rate based on sampling_rate
- */
-static unsigned int effective_sampling_rate(void)
-{
-	return max(dbs_tuners_ins.sampling_rate, min_sampling_rate);
-}
-
-/*
  * Find right freq to be set now with powersave_bias on.
  * Returns the freq_hi to be used right now and will set freq_hi_jiffies,
  * freq_lo, and freq_lo_jiffies in percpu area for averaging freqs.
@@ -275,7 +267,7 @@ static unsigned int powersave_bias_target(struct cpufreq_policy *policy,
 		dbs_info->freq_lo_jiffies = 0;
 		return freq_lo;
 	}
-	jiffies_total = usecs_to_jiffies(effective_sampling_rate());
+	jiffies_total = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
 	jiffies_hi = (freq_avg - freq_lo) * jiffies_total;
 	jiffies_hi += ((freq_hi - freq_lo) / 2);
 	jiffies_hi /= (freq_hi - freq_lo);
@@ -381,7 +373,7 @@ static void update_sampling_rate(unsigned int new_rate)
 	if (new_rate)
 		dbs_tuners_ins.sampling_rate = max(new_rate, min_sampling_rate);
 
-	effective = effective_sampling_rate();
+	effective = dbs_tuners_ins.sampling_rate;
 
 	get_online_cpus();
 	for_each_online_cpu(cpu) {
@@ -1248,7 +1240,7 @@ static void do_dbs_timer(struct work_struct *work)
 			dbs_info->sample_type = DBS_SUB_SAMPLE;
 			delay = dbs_info->freq_hi_jiffies;
 		} else {
-			delay = usecs_to_jiffies(effective_sampling_rate()
+			delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate
 				* dbs_info->rate_mult);
 		}
 	} else {
@@ -1263,7 +1255,7 @@ static void do_dbs_timer(struct work_struct *work)
 static inline void dbs_timer_init(struct cpu_dbs_info_s *dbs_info)
 {
 	/* We want all CPUs to do sampling nearly on same jiffy */
-	int delay = usecs_to_jiffies(effective_sampling_rate());
+	int delay = usecs_to_jiffies(dbs_tuners_ins.sampling_rate);
 
 	if (num_online_cpus() > 1)
 		delay -= jiffies % delay;
@@ -1430,11 +1422,30 @@ bail_acq_sema_failed:
 	atomic_set(&this_dbs_info->src_sync_cpu, -1);
 }
 
+static void dbs_sync_set_prio(unsigned int policy, unsigned int prio)
+{
+	struct sched_param param = { .sched_priority = prio };
+
+	sched_setscheduler(current, policy, &param);
+}
+
+static void dbs_sync_park(unsigned int cpu)
+{
+	dbs_sync_set_prio(SCHED_NORMAL, 0);
+}
+
+static void dbs_sync_unpark(unsigned int cpu)
+{
+	dbs_sync_set_prio(SCHED_FIFO, MAX_RT_PRIO - 1);
+}
+
 static struct smp_hotplug_thread dbs_sync_threads = {
 	.store		= &sync_thread,
 	.thread_should_run = dbs_sync_should_run,
 	.thread_fn	= run_dbs_sync,
 	.thread_comm	= "dbs_sync/%u",
+	.park		= dbs_sync_park,
+	.unpark		= dbs_sync_unpark,
 };
 
 static void dbs_input_event(struct input_handle *handle, unsigned int type,
@@ -1579,8 +1590,7 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			min_sampling_rate = max(min_sampling_rate,
 					MIN_LATENCY_MULTIPLIER * latency);
 			dbs_tuners_ins.sampling_rate =
-				max(min_sampling_rate,
-				    latency * LATENCY_MULTIPLIER);
+				ondemand_current_sampling_rate;
 			dbs_tuners_ins.io_is_busy = 0;
 
 			if (dbs_tuners_ins.optimal_freq == 0)
@@ -1597,7 +1607,6 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			rc = input_register_handler(&dbs_input_handler);
 #endif
 		mutex_unlock(&dbs_mutex);
-
 
 		if (!ondemand_powersave_bias_setspeed(
 					this_dbs_info->cur_policy,
@@ -1639,10 +1648,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		break;
 
 	case CPUFREQ_GOV_LIMITS:
-		if (this_dbs_info->cur_policy == NULL) {
-			pr_debug("Unable to limit cpu freq due to cur_policy == NULL\n");
-			return -EPERM;
-		}
+		/* If device is being removed, skip set limits */
+		if (this_dbs_info->cur_policy == NULL)
+			break;
 		mutex_lock(&this_dbs_info->timer_mutex);
 		if (policy->max < this_dbs_info->cur_policy->cur)
 			__cpufreq_driver_target(this_dbs_info->cur_policy,

@@ -88,7 +88,6 @@ static struct core_thermal_data core_thermal_info = {
 	.num_cores = NR_CPUS,
 };
 
-
 #define MAX_HOTPLUG_RATE	(40)
 #define DOWN_INDEX		(0)
 #define UP_INDEX		(1)
@@ -401,7 +400,8 @@ static void hotplug_work_fn(struct work_struct *work)
 			/* get the cpu current frequency */
 			cur_freq = acpuclk_get_rate(cpu);
 
-			this_hotplug_cpuinfo =	&per_cpu(od_hotplug_cpuinfo, cpu);
+			this_hotplug_cpuinfo =
+					&per_cpu(od_hotplug_cpuinfo, cpu);
 
 			up_load = hotplug_load[cpu][UP_INDEX];
 			down_load = hotplug_load[cpu][DOWN_INDEX];
@@ -427,8 +427,8 @@ static void hotplug_work_fn(struct work_struct *work)
 				schedule_down_cpu);
 #endif
 
-			if (cpu > 0
-					&& (online_cpus - online_cpu) > upmaxcoreslimit) {
+			if (cpu > 0 && (online_cpus - online_cpu) >
+						upmaxcoreslimit) {
 				ref_cpu = this_hotplug_cpuinfo->up_by_cpu;
 				if (ref_cpu >= 0) {
 					ref_hotplug_cpuinfo =
@@ -1052,7 +1052,8 @@ static int __init alucard_hotplug_init(void)
 	if (atomic_read(&hotplug_tuners_ins.hotplug_enable) > 0) {
 		init_rq_avg_stats();
 
-		delay = msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate);
+		delay = msecs_to_jiffies(
+				hotplug_tuners_ins.hotplug_sampling_rate);
 
 		queue_delayed_work_on(0, alucardhp_wq,
 			&alucard_hotplug_work, delay);
@@ -1094,5 +1095,6 @@ MODULE_AUTHOR("Alucard_24@XDA");
 MODULE_DESCRIPTION("'alucard_hotplug' - A cpu hotplug driver for "
 	"capable processors");
 MODULE_LICENSE("GPL");
+
 late_initcall(alucard_hotplug_init);
 late_initexit(alucard_hotplug_exit);
