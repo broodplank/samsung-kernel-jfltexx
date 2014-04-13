@@ -17,6 +17,7 @@
 #include <linux/init.h>
 #include <linux/notifier.h>
 #include <linux/cpufreq.h>
+#include <mach/cpufreq.h>
 #include <linux/sched.h>
 #include <linux/jiffies.h>
 #include <linux/kthread.h>
@@ -27,12 +28,16 @@
 
 #define MIM_TIME_INTERVAL_US (100 * USEC_PER_MSEC)
 #define DEF_INPUT_BOOST_FREQ	(1134000)
+#define DEF_BOOST_SAMPLING_RATE	(40)
 /* 
  * This variable comes from interactive governor. If you want to implement this
  * driver you have to also implement this variable on your governor of choice 
  */
 static int input_boost_freq = DEF_INPUT_BOOST_FREQ;
 module_param(input_boost_freq, int, 0644);
+
+static unsigned int boost_sampling_rate = DEF_BOOST_SAMPLING_RATE;
+module_param(boost_sampling_rate, uint, 0644);
 
 /*
  * Use this variable in your governor of choice to calculate when the cpufreq
@@ -87,15 +92,20 @@ static struct notifier_block boost_adjust_nb = {
 
 static void do_rem_input_boost(struct work_struct *work)
 {
+	int ret;
 	boost_freq_buf = 0;
 	/* Force policy re-evaluation to trigger adjust notifier. */
+#if 0
 	cpufreq_update_policy(0);
+#endif
+	ret = set_freq_limit(DVFS_TOUCH_ID, -1);
 }
 
 static void do_input_boost(struct work_struct *work)
 {
 	unsigned int ret;
 	struct cpufreq_policy policy;
+	unsigned int sampling_rate = boost_sampling_rate;
 
 	/* 
 	 * to avoid concurrency issues we cancel rem_input_boost
@@ -110,10 +120,14 @@ static void do_input_boost(struct work_struct *work)
 	if (policy.cur >= input_boost_freq)
 	{
 		boost_freq_buf = input_boost_freq;
-		cpufreq_update_policy(0);
+#if 0
+		//cpufreq_update_policy(0);
+#endif
+		ret = set_freq_limit(DVFS_TOUCH_ID,
+							input_boost_freq);
 	}
 
-	queue_delayed_work(input_boost_wq, &rem_input_boost, msecs_to_jiffies(40));
+	queue_delayed_work(input_boost_wq, &rem_input_boost, msecs_to_jiffies(sampling_rate));
 }
 
 static void boost_input_event(struct input_handle *handle,
