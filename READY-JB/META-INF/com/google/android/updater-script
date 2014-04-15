@@ -1,6 +1,6 @@
 ui_print("");ui_print("");ui_print("");ui_print("");ui_print("");ui_print("");
 ui_print("------------------------------------------");
-ui_print("             Kernel for SG2 I9505         ");
+ui_print("             Kernel for SG I9505          ");
 ui_print("                                          ");
 ui_print("                                          ");
 ui_print("       ##  #   #  #  ###  ##  ###  ###    "); 
