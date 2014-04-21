@@ -1054,6 +1054,12 @@ static void check_spread(struct cfs_rq *cfs_rq, struct sched_entity *se)
 #endif
 }
 
+static unsigned int Lgentle_fair_sleepers = 1;
+void relay_gfs(unsigned int gfs)
+{
+	Lgentle_fair_sleepers = gfs;
+}
+
 static void
 place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 {
@@ -1076,7 +1082,7 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 		 * Halve their sleep time's effect, to allow
 		 * for a gentler effect of sleepers:
 		 */
-		if (sched_feat(GENTLE_FAIR_SLEEPERS))
+		if (Lgentle_fair_sleepers)
 			thresh >>= 1;
 
 		vruntime -= thresh;
@@ -3292,7 +3298,7 @@ int can_migrate_task(struct task_struct *p, struct lb_env *env)
  *
  * Called with both runqueues locked.
  */
-static int move_one_task(struct lb_env *env)
+static int move_one_task(struct lb_env *env, int *total_run_moved)
 {
 	struct task_struct *p, *n;
 
@@ -3310,6 +3316,10 @@ static int move_one_task(struct lb_env *env)
 		 * stats here rather than inside move_task().
 		 */
 		schedstat_inc(env->sd, lb_gained[env->idle]);
+		if (sysctl_sched_ravg_window)
+			*total_run_moved += div64_u64((u64)p->se.ravg.demand *
+					100, (u64)(sysctl_sched_ravg_window));
+
 		return 1;
 	}
 	return 0;
@@ -3326,7 +3336,7 @@ static const unsigned int sched_nr_migrate_break = 32;
  *
  * Called with both runqueues locked.
  */
-static int move_tasks(struct lb_env *env)
+static int move_tasks(struct lb_env *env, int *total_run_moved)
 {
 	struct list_head *tasks = &env->src_rq->cfs_tasks;
 	struct task_struct *p;
@@ -3368,6 +3378,9 @@ static int move_tasks(struct lb_env *env)
 		move_task(p, env);
 		pulled++;
 		env->load_move -= load;
+		if (sysctl_sched_ravg_window)
+			*total_run_moved += div64_u64((u64)p->se.ravg.demand *
+					100, (u64)(sysctl_sched_ravg_window));
 
 #ifdef CONFIG_PREEMPT
 		/*
@@ -4516,9 +4529,10 @@ static int load_balance(int this_cpu, struct rq *this_rq,
 			int *balance)
 {
 	int ld_moved, active_balance = 0;
+	int total_run_moved = 0;
 	struct sched_group *group;
 	unsigned long imbalance;
-	struct rq *busiest = NULL;
+	struct rq *busiest;
 	unsigned long flags;
 	struct cpumask *cpus = __get_cpu_var(load_balance_tmpmask);
 
@@ -4577,7 +4591,7 @@ more_balance:
 		double_rq_lock(this_rq, busiest);
 		if (!env.loop)
 			update_h_load(env.src_cpu);
-		ld_moved += move_tasks(&env);
+		ld_moved += move_tasks(&env, &total_run_moved);
 		double_rq_unlock(this_rq, busiest);
 		local_irq_restore(flags);
 
@@ -4653,10 +4667,15 @@ more_balance:
 	} else {
 		sd->nr_balance_failed = 0;
 		if (per_cpu(dbs_boost_needed, this_cpu)) {
+			struct migration_notify_data mnd;
+
 			per_cpu(dbs_boost_needed, this_cpu) = false;
+
+			mnd.src_cpu = cpu_of(busiest);
+			mnd.dest_cpu = this_cpu;
+			mnd.load = total_run_moved;
 			atomic_notifier_call_chain(&migration_notifier_head,
-						   this_cpu,
-						   (void *)cpu_of(busiest));
+						   0, (void *)&mnd);
 		}
 	}
 	if (likely(!active_balance)) {
@@ -4689,10 +4708,6 @@ out_one_pinned:
 
 	ld_moved = 0;
 out:
-	trace_sched_load_balance(this_cpu, idle, *balance,
-				 group ? group->cpumask[0] : 0,
-				 busiest ? busiest->nr_running : 0, imbalance,
-				 env.flags, ld_moved, sd->balance_interval);
 	return ld_moved;
 }
 
@@ -4780,6 +4795,7 @@ static int active_load_balance_cpu_stop(void *data)
 	struct rq *busiest_rq = data;
 	int busiest_cpu = cpu_of(busiest_rq);
 	int target_cpu = busiest_rq->push_cpu;
+	int total_run_moved = 0;
 	struct rq *target_rq = cpu_rq(target_cpu);
 	struct sched_domain *sd;
 
@@ -4824,7 +4840,7 @@ static int active_load_balance_cpu_stop(void *data)
 
 		schedstat_inc(sd, alb_count);
 
-		if (move_one_task(&env))
+		if (move_one_task(&env, &total_run_moved))
 			schedstat_inc(sd, alb_pushed);
 		else
 			schedstat_inc(sd, alb_failed);
@@ -4835,10 +4851,15 @@ out_unlock:
 	busiest_rq->active_balance = 0;
 	raw_spin_unlock_irq(&busiest_rq->lock);
 	if (per_cpu(dbs_boost_needed, target_cpu)) {
+		struct migration_notify_data mnd;
+
 		per_cpu(dbs_boost_needed, target_cpu) = false;
+
+		mnd.src_cpu = cpu_of(busiest_rq);
+		mnd.dest_cpu = target_cpu;
+		mnd.load = total_run_moved;
 		atomic_notifier_call_chain(&migration_notifier_head,
-					   target_cpu,
-					   (void *)cpu_of(busiest_rq));
+					   0, (void *)&mnd);
 	}
 	return 0;
 }
