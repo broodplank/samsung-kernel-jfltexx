@@ -1814,6 +1814,13 @@ config ALUCARD_HOTPLUG
 	help
 	  Generic Alucard-hotplug cpu hotplug driver for ARM SOCs
 
+config ALUCARD_HOTPLUG_THERMAL
+	bool "Enable alucard-hotplug thermal control"
+	depends on ALUCARD_HOTPLUG
+	default n
+	help
+	  Alucard-hotplug thermal control
+
 config CPU_VOLTAGE_TABLE
 	bool "Enable CPU Voltage Table via sysfs for adjustements"
 	default n
