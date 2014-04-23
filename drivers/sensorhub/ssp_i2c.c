@@ -175,6 +175,7 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	char chTxbuf[uLength + 4];
 	char chRxbuf = 0;
 	int iRet = 0, iRetries = DEFAULT_RETRIES;
+	unsigned int cpu;
 
 	if (data->fw_dl_state == FW_DL_STATE_DOWNLOADING) {
 		pr_err("[SSP] %s - Skip Inst! DL state = %d\n",
@@ -256,7 +257,9 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	if (gps_status != previous_gps_status) {
 		previous_gps_status = gps_status;
 		scaling_max_gps_freq = min(max(scaling_max_gps_freq, MIN_FREQ), MAX_FREQ);
-		msm_cpufreq_set_freq_limits(0, MSM_CPUFREQ_NO_LIMIT, gps_status ? scaling_max_gps_freq : MAX_FREQ);
+		for_each_possible_cpu(cpu) {
+			msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, gps_status ? scaling_max_gps_freq : MSM_CPUFREQ_NO_LIMIT);
+		}
 	}
 
 	data->uInstFailCnt = 0;
