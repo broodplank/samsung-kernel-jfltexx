@@ -2866,4 +2866,11 @@ config FORCE_FAST_CHARGE
 	  are detected as USB to charge as AC (1A/h) or to set
 	  custom charging currents for AC and USB.
 
+config CPUFREQ_LIMIT_MANAGER
+	bool "CPUFREQ limitter for suspend, gps, oncall using"
+	default n
+	help
+	  A simple sysfs interface to limit cpufreq,
+	  when using gps, or call or suspend.
+
 endif

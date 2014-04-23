@@ -13,17 +13,18 @@
  *
  */
 #include "ssp.h"
-#include <mach/cpufreq.h>
+#ifdef CONFIG_CPUFREQ_LIMIT_MANAGER
+#include <linux/cpufreq_limit_manager.h>
+#endif
 
 #define LIMIT_DELAY_CNT		200
-#define MIN_FREQ	810000
-#define MAX_FREQ	1890000
 
-static unsigned int scaling_max_gps_freq = MAX_FREQ;
-module_param(scaling_max_gps_freq, uint, 0644);
+#ifdef CONFIG_CPUFREQ_LIMIT_MANAGER
 static bool gps_status = false;
-module_param(gps_status, uint, 0444);
 static bool previous_gps_status = false;
+static bool oncall_status = false;
+static bool previous_oncall_status = false;
+#endif
 
 int waiting_wakeup_mcu(struct ssp_data *data)
 {
@@ -247,7 +248,8 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 			return FAIL;
 		}
 	}
-	
+
+#ifdef CONFIG_CPUFREQ_LIMIT_MANAGER
 	/* GPS active | not active */
 	if (uInst == ADD_SENSOR && uSensorType == GEOMAGNETIC_SENSOR)
 		gps_status = true;
@@ -256,11 +258,20 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 
 	if (gps_status != previous_gps_status) {
 		previous_gps_status = gps_status;
-		scaling_max_gps_freq = min(max(scaling_max_gps_freq, MIN_FREQ), MAX_FREQ);
-		for_each_possible_cpu(cpu) {
-			msm_cpufreq_set_freq_limits(cpu, MSM_CPUFREQ_NO_LIMIT, gps_status ? scaling_max_gps_freq : MSM_CPUFREQ_NO_LIMIT);
-		}
+		update_cpufreq_limit(2, gps_status);
 	}
+
+	//On call | / Not on call
+	if (uInst == ADD_SENSOR && uSensorType == PROXIMITY_SENSOR)
+		oncall_status = true;
+	else if (uInst == REMOVE_SENSOR && uSensorType == PROXIMITY_SENSOR)
+		oncall_status = false;
+
+	if (oncall_status != previous_oncall_status) {
+		previous_oncall_status = oncall_status;
+		update_cpufreq_limit(1, oncall_status);
+	}
+#endif
 
 	data->uInstFailCnt = 0;
 	ssp_dbg("[SSP]: %s - Inst = 0x%x, Sensor Type = 0x%x, data = %u\n",
