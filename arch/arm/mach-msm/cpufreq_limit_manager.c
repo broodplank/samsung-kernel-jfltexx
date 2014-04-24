@@ -35,8 +35,6 @@ unsigned int scaling_max_suspend_freq = CPU_MAX_FREQ;
 unsigned int scaling_max_oncall_freq = CPU_MAX_ONCALL_FREQ;
 unsigned int scaling_max_gps_freq = CPU_MAX_FREQ;
 
-static DEFINE_MUTEX(cpufreq_limit_mutex);
-
 static bool suspended = false;
 static bool gps_status = false;
 static bool oncall_status = false;
@@ -50,25 +48,31 @@ int update_cpufreq_limit(unsigned int limit_type, bool limit_status)
 	switch (limit_type) {
 	case 0:
 		/* SUSPEND */
-		if (suspended) {
-			min_freq = scaling_min_suspend_freq;
-			max_freq = scaling_max_suspend_freq;
-		}
+		suspended = limit_status;
 		break;
 	case 1:
 		/* CALL */
 		oncall_status = limit_status;
-		if (oncall_status)
-			max_freq = scaling_max_oncall_freq;
 		break;
 	case 2:
 		/* GPS */
 		gps_status = limit_status;
-		if (gps_status)
-			max_freq = scaling_max_gps_freq;
 		break;
 	default:
 		break;
+	}
+
+	if (suspended) {
+		min_freq = scaling_min_suspend_freq;
+		max_freq = scaling_max_suspend_freq;
+	}
+	
+	if (oncall_status) {
+		max_freq = scaling_max_oncall_freq;
+	}
+		
+	if (gps_status) {
+		max_freq = scaling_max_gps_freq;
 	}
 
 	for_each_possible_cpu(cpu) {
@@ -87,9 +91,6 @@ static void __ref cpufreq_limit_suspend(struct early_suspend *handler)
 #endif
 {
  	/* SUSPEND */
-	mutex_lock(&cpufreq_limit_mutex);
-	suspended = true;
-	mutex_unlock(&cpufreq_limit_mutex);
 	update_cpufreq_limit(0, true);
 }
 
@@ -101,9 +102,6 @@ static void __cpuinit cpufreq_limit_late_resume(
 #endif
 {
 	/* RESUME */
-	mutex_lock(&cpufreq_limit_mutex);
-	suspended = false;
-	mutex_unlock(&cpufreq_limit_mutex);
 	update_cpufreq_limit(0, false);
 }
 
