@@ -68,10 +68,12 @@ int update_cpufreq_limit(unsigned int limit_type, bool limit_status)
 	}
 	
 	if (oncall_status) {
+		min_freq = MSM_CPUFREQ_NO_LIMIT;
 		max_freq = scaling_max_oncall_freq;
 	}
 		
 	if (gps_status) {
+		min_freq = MSM_CPUFREQ_NO_LIMIT;
 		max_freq = scaling_max_gps_freq;
 	}
 
