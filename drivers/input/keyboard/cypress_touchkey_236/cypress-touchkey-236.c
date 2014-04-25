@@ -327,7 +327,7 @@ static void cypress_set_dvfs_lock(struct cypress_touchkey_info *info,
 	if (on == 0) {
 		if (info->dvfs_lock_status) {
 			touch_booster_time = atomic_read(&cyp_touch_booster_off_time);
-			schedule_delayed_work(&info->work_dvfs_off,
+			queue_delayed_work(system_power_efficient_wq, &info->work_dvfs_off,
 				msecs_to_jiffies(touch_booster_time));
 		}
 	} else if (on == 1) {
@@ -347,7 +347,7 @@ static void cypress_set_dvfs_lock(struct cypress_touchkey_info *info,
 					__func__, ret);
 
 			touch_booster_time = atomic_read(&cyp_touch_booster_chg_time);
-			schedule_delayed_work(&info->work_dvfs_chg,
+			queue_delayed_work(system_power_efficient_wq, &info->work_dvfs_chg,
 				msecs_to_jiffies(touch_booster_time));
 			info->dvfs_lock_status = true;
 		}
@@ -355,7 +355,7 @@ static void cypress_set_dvfs_lock(struct cypress_touchkey_info *info,
 		if (info->dvfs_lock_status) {
 			cancel_delayed_work(&info->work_dvfs_off);
 			cancel_delayed_work(&info->work_dvfs_chg);
-			schedule_work(&info->work_dvfs_off.work);
+			queue_work(system_power_efficient_wq, &info->work_dvfs_off.work);
 		}
 	}
 	mutex_unlock(&info->dvfs_lock);
