@@ -20,9 +20,7 @@
 #define LIMIT_DELAY_CNT		200
 
 #ifdef CONFIG_CPUFREQ_LIMIT_MANAGER
-static bool gps_status = false;
 static bool previous_gps_status = false;
-static bool oncall_status = false;
 static bool previous_oncall_status = false;
 #endif
 
@@ -176,7 +174,11 @@ int send_instruction(struct ssp_data *data, u8 uInst,
 	char chTxbuf[uLength + 4];
 	char chRxbuf = 0;
 	int iRet = 0, iRetries = DEFAULT_RETRIES;
-	unsigned int cpu;
+#ifdef CONFIG_CPUFREQ_LIMIT_MANAGER
+	bool gps_status = false;
+	bool oncall_status = false;
+#endif
+
 
 	if (data->fw_dl_state == FW_DL_STATE_DOWNLOADING) {
 		pr_err("[SSP] %s - Skip Inst! DL state = %d\n",
