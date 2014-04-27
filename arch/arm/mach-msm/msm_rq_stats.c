@@ -147,8 +147,13 @@ static unsigned int report_load_at_max_freq(void)
 unsigned int report_cpu_load(unsigned int cpu)
 {
 	struct cpu_load_data *pcpu = &per_cpu(cpuload, cpu);
+	unsigned int cpu_load = 0;
 
-	return pcpu->cpu_load;
+	mutex_lock(&pcpu->cpu_load_mutex);
+	cpu_load = pcpu->cpu_load;
+	mutex_unlock(&pcpu->cpu_load_mutex);
+
+	return cpu_load;
 }
 #endif
 
