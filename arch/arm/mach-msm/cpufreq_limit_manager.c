@@ -67,7 +67,7 @@ int update_cpufreq_limit(unsigned int limit_type, bool limit_status)
 		max_freq = scaling_max_suspend_freq;
 	}
 	
-	if (oncall_status) {
+	if (oncall_status && suspended) {
 		min_freq = MSM_CPUFREQ_NO_LIMIT;
 		max_freq = scaling_max_oncall_freq;
 	}
