@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.4.87 Kernel Configuration
+# Linux/arm 3.4.88 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1550,7 +1550,6 @@ CONFIG_INPUT_FF_MEMLESS=y
 CONFIG_INPUT_EVDEV=y
 # CONFIG_INPUT_EVBUG is not set
 # CONFIG_INPUT_KEYRESET is not set
-CONFIG_DVFS_TOUCH_INTERFACE=y
 
 #
 # Input Device Drivers

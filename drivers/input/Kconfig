@@ -174,14 +174,6 @@ config INPUT_KEYRESET
 	  To compile this driver as a module, choose M here: the
 	  module will be called keyreset.
 
-config DVFS_TOUCH_INTERFACE
-	bool "DVFS Touch Interface"
-	depends on SEC_DVFS_BOOSTER
-	default y
-	help
-	  A simple sysfs interface to manage
-          dvfs touch tweaks manually.
-
 comment "Input Device Drivers"
 
 source "drivers/input/keyboard/Kconfig"
