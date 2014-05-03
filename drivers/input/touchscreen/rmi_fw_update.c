@@ -739,16 +739,17 @@ static int fwu_enter_flash_prog(void)
 static int fwu_do_reflash(void)
 {
 	int retval;
+	unsigned int limit;
 
 #ifdef TSP_BOOSTER
-	if (dvfs_boost_mode != 0) {
-		if (min_touch_limit < CPU_MIN_FREQ)
-			min_touch_limit = CPU_MIN_FREQ;
-		else if (min_touch_limit > CPU_MAX_FREQ)
-			min_touch_limit = CPU_MAX_FREQ;
+	if (dvfs_boost_mode > 0) {
+		limit = min_touch_limit;
+		if (limit < CPU_MIN_FREQ)
+			limit = CPU_MIN_FREQ;
+		else if (limit > CPU_MAX_FREQ)
+			limit = CPU_MAX_FREQ;
 
-		retval = set_freq_limit(DVFS_TOUCH_ID,
-					min_touch_limit);
+		retval = set_freq_limit(DVFS_TOUCH_ID, limit);
 		if (retval < 0)
 			dev_err(&fwu->rmi4_data->i2c_client->dev,
 				"%s: dvfs failed at fw update.\n",

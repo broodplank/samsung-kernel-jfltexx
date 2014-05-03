@@ -37,8 +37,8 @@ static unsigned int dvfs_boost_mode = 2;
 module_param(dvfs_boost_mode, uint, 0644);
 static unsigned int min_touch_limit = 1134000;
 module_param(min_touch_limit, uint, 0644);
-static unsigned int mxts_touch_booster_off_time = 300;
-module_param(mxts_touch_booster_off_time, uint, 0644);
+static unsigned int booster_off_time = 300;
+module_param(booster_off_time, uint, 0644);
 #endif
 
 /*#define dev_dbg(dev, fmt, arg...) dev_info(dev, fmt, ##arg)*/
@@ -550,6 +550,8 @@ static void mxt_set_dvfs_off(struct work_struct *work)
 static void mxt_set_dvfs_lock(struct mxt_data *data, uint32_t on)
 {
 	int ret = 0;
+	unsigned int limit;
+	unsigned int delay;
 
 	if (dvfs_boost_mode == 0)
 		return;
@@ -557,18 +559,20 @@ static void mxt_set_dvfs_lock(struct mxt_data *data, uint32_t on)
 	mutex_lock(&data->dvfs_lock);
 	if (on == 0) {
 		if (data->dvfs_lock_status) {
+			delay = booster_off_time;
 			queue_delayed_work(system_power_efficient_wq, &data->work_dvfs_off,
-				msecs_to_jiffies(mxts_touch_booster_off_time));
+				msecs_to_jiffies(delay));
 		}
 	} else if (on == 1) {
 		cancel_delayed_work(&data->work_dvfs_off);
 		if (!data->dvfs_lock_status) {
-			if (min_touch_limit < CPU_MIN_FREQ)
-				min_touch_limit = CPU_MIN_FREQ;
-			else if (min_touch_limit > CPU_MAX_FREQ)
-				min_touch_limit = CPU_MAX_FREQ;
+			limit = min_touch_limit;
+			if (limit < CPU_MIN_FREQ)
+				limit = CPU_MIN_FREQ;
+			else if (limit > CPU_MAX_FREQ)
+				limit = CPU_MAX_FREQ;
 
-			ret = set_freq_limit(DVFS_TOUCH_ID, min_touch_limit);
+			ret = set_freq_limit(DVFS_TOUCH_ID, limit);
 
 			if (ret < 0)
 				pr_err("%s: cpu lock failed(%d)\n",\

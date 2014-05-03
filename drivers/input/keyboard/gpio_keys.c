@@ -40,10 +40,10 @@ static unsigned int min_touch_limit = 1134000;
 module_param(min_touch_limit, uint, 0644);
 static unsigned int min_touch_limit_second = 810000;
 module_param(min_touch_limit_second, uint, 0644);
-static unsigned int gpio_key_booster_chg_time = 200;
-module_param(gpio_key_booster_chg_time, uint, 0644);
-static unsigned int gpio_key_booster_off_time = 300;
-module_param(gpio_key_booster_off_time, uint, 0644);
+static unsigned int booster_chg_time = 200;
+module_param(booster_chg_time, uint, 0644);
+static unsigned int booster_off_time = 300;
+module_param(booster_off_time, uint, 0644);
 #endif
 
 struct gpio_button_data {
@@ -358,15 +358,16 @@ static void gpio_key_change_dvfs_lock(struct work_struct *work)
 		container_of(work,
 			struct gpio_button_data, work_dvfs_chg.work);
 	int retval;
+	unsigned int limit_second;
 
 	mutex_lock(&bdata->dvfs_lock);
-	if (min_touch_limit_second < CPU_MIN_FREQ)
-		min_touch_limit_second = CPU_MIN_FREQ;
-	else if (min_touch_limit_second > CPU_MAX_FREQ)
-		min_touch_limit_second = CPU_MAX_FREQ;
+	limit_second = min_touch_limit_second;
+	if (limit_second < CPU_MIN_FREQ)
+		limit_second = CPU_MIN_FREQ;
+	else if (limit_second > CPU_MAX_FREQ)
+		limit_second = CPU_MAX_FREQ;
 
-	retval = set_freq_limit(DVFS_TOUCH_ID,
-			min_touch_limit_second);
+	retval = set_freq_limit(DVFS_TOUCH_ID, limit_second);
 	if (retval < 0)
 		printk(KERN_ERR
 			"%s: booster change failed(%d).\n",
@@ -394,6 +395,8 @@ static void gpio_key_set_dvfs_lock(struct gpio_button_data *bdata,
 					uint32_t on)
 {
 	int ret = 0;
+	unsigned int limit;
+	unsigned int delay;
 
 	if (dvfs_boost_mode == 0)
 		return;
@@ -401,26 +404,28 @@ static void gpio_key_set_dvfs_lock(struct gpio_button_data *bdata,
 	mutex_lock(&bdata->dvfs_lock);
 	if (on == 0) {
 		if (bdata->dvfs_lock_status) {
+			delay = booster_off_time;
 			queue_delayed_work(system_power_efficient_wq, &bdata->work_dvfs_off,
-				msecs_to_jiffies(gpio_key_booster_off_time));
+				msecs_to_jiffies(delay));
 		}
 	} else if (on == 1) {
 		cancel_delayed_work(&bdata->work_dvfs_off);
 		if (!bdata->dvfs_lock_status) {
-			if (min_touch_limit < CPU_MIN_FREQ)
-				min_touch_limit = CPU_MIN_FREQ;
-			else if (min_touch_limit > CPU_MAX_FREQ)
-				min_touch_limit = CPU_MAX_FREQ;
+			limit = min_touch_limit;
+			if (limit < CPU_MIN_FREQ)
+				limit = CPU_MIN_FREQ;
+			else if (limit > CPU_MAX_FREQ)
+				limit = CPU_MAX_FREQ;
 
-			ret = set_freq_limit(DVFS_TOUCH_ID,
-					min_touch_limit);
+			ret = set_freq_limit(DVFS_TOUCH_ID, limit);
 			if (ret < 0)
 				printk(KERN_ERR
 					"%s: cpu first lock failed(%d)\n",
 					__func__, ret);
 
+			delay = booster_chg_time;
 			queue_delayed_work(system_power_efficient_wq, &bdata->work_dvfs_chg,
-				msecs_to_jiffies(gpio_key_booster_chg_time));
+				msecs_to_jiffies(delay));
 			bdata->dvfs_lock_status = true;
 		}
 	}
