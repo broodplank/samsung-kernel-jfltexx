@@ -41,9 +41,14 @@ static bool oncall_status = false;
 
 int update_cpufreq_limit(unsigned int limit_type, bool limit_status)
 {
+#ifdef CONFIG_SEC_DVFS
+	unsigned int min_freq = 0;
+	unsigned int max_freq = 0;
+#else
 	unsigned int cpu;
 	unsigned int min_freq = MSM_CPUFREQ_NO_LIMIT;
 	unsigned int max_freq = MSM_CPUFREQ_NO_LIMIT;
+#endif
 
 	switch (limit_type) {
 	case 0:
@@ -68,18 +73,38 @@ int update_cpufreq_limit(unsigned int limit_type, bool limit_status)
 	}
 	
 	if (oncall_status && suspended) {
+#ifdef CONFIG_SEC_DVFS
+		min_freq = 0;
+#else
 		min_freq = MSM_CPUFREQ_NO_LIMIT;
+#endif
 		max_freq = scaling_max_oncall_freq;
 	}
 		
 	if (gps_status) {
+#ifdef CONFIG_SEC_DVFS
+		min_freq = 0;
+#else
 		min_freq = MSM_CPUFREQ_NO_LIMIT;
+#endif
 		max_freq = scaling_max_gps_freq;
 	}
 
+#ifdef CONFIG_SEC_DVFS
+	if (min_freq)
+		set_freq_limit(DVFS_APPS_MIN_ID, min_freq);
+	else
+		set_freq_limit(DVFS_APPS_MIN_ID, -1);
+
+	if (max_freq)
+		set_freq_limit(DVFS_APPS_MAX_ID, max_freq);
+	else
+		set_freq_limit(DVFS_APPS_MAX_ID, -1);
+#else
 	for_each_possible_cpu(cpu) {
 		msm_cpufreq_set_freq_limits(cpu, min_freq, max_freq);
 	}
+#endif
 
 	return 0;
 }
