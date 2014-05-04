@@ -695,11 +695,13 @@ static void synaptics_set_dvfs_lock(struct synaptics_rmi4_data *rmi4_data,
 	int ret = 0;
 	unsigned int limit;
 	unsigned int delay;
+	unsigned int mode;
 
-	if (rmi4_data->dvfs_boost_mode != dvfs_boost_mode) {
-		if (dvfs_boost_mode == 0 || dvfs_boost_mode == 1 
-				|| dvfs_boost_mode == 2)
-					rmi4_data->dvfs_boost_mode = dvfs_boost_mode;
+	mode = dvfs_boost_mode;
+
+	if (rmi4_data->dvfs_boost_mode != mode) {
+		if (mode == 0 || mode == 1 || mode == 2)
+			rmi4_data->dvfs_boost_mode = mode;
 	}
 
 	if (rmi4_data->dvfs_boost_mode == DVFS_STAGE_NONE) {
