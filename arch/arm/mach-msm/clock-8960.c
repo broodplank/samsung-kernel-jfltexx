@@ -3514,7 +3514,6 @@ static struct rcg_clk gfx2d1_clk = {
 /*Shared by 8064, 8930, and 8960ab*/
 static struct clk_freq_tbl clk_tbl_gfx3d[] = {
 	F_GFX3D(        0, gnd,   0,  0),
-	F_GFX3D(  1800000, pxo,   1, 15),
 	F_GFX3D( 27000000, pxo,   0,  0),
 	F_GFX3D( 48000000, pll8,  1,  8),
 	F_GFX3D( 54857000, pll8,  1,  7),
@@ -4107,11 +4106,13 @@ static struct clk_freq_tbl clk_tbl_tv[] = {
 	F_TV( 27000000, hdmi_pll,  27000000, 1, 0, 0),
 	F_TV( 27030000, hdmi_pll,  27030000, 1, 0, 0),
 	F_TV( 74250000, hdmi_pll,  74250000, 1, 0, 0),
+	F_TV(108000000, hdmi_pll, 108000000, 1, 0, 0),
 	F_TV(148500000, hdmi_pll, 148500000, 1, 0, 0),
 	F_END
 };
 #else
 static struct clk_freq_tbl clk_tbl_tv[] = {
+	F_END
 };
 #endif
 
