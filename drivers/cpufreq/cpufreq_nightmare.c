@@ -626,7 +626,8 @@ static int cpufreq_governor_nightmare(struct cpufreq_policy *policy,
 static int __init cpufreq_gov_nightmare_init(void)
 {
 	nightmare_wq = alloc_workqueue("nightmare_wq",
-						WQ_HIGHPRI | WQ_UNBOUND, 0);
+				WQ_POWER_EFFICIENT, 0);
+//						WQ_HIGHPRI | WQ_UNBOUND, 0);
 	if (!nightmare_wq) {
 		printk(KERN_ERR "Failed to create nightmare workqueue\n");
 		return -EFAULT;

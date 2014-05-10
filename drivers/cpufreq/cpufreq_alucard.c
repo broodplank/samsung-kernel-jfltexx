@@ -519,7 +519,8 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 static int __init cpufreq_gov_alucard_init(void)
 {
 	alucard_wq = alloc_workqueue("alucard_wq",
-						WQ_HIGHPRI | WQ_UNBOUND, 0);
+				WQ_POWER_EFFICIENT, 0);
+//						WQ_HIGHPRI | WQ_UNBOUND, 0);
 
 	if (!alucard_wq) {
 		printk(KERN_ERR "Failed to create alucard workqueue\n");

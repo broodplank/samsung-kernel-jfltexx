@@ -397,7 +397,6 @@ static void cpufreq_interactive_timer(unsigned long data)
 
 	cpufreq_notify_utilization(pcpu->policy, cpu_load);
 
-	// HACK HACK HACK BEGIN
 	if (counter < 5) {
 		counter++;
 		if (counter > 2) {
