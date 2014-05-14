@@ -1269,7 +1269,6 @@ static int ep_insert(struct eventpoll *ep, struct epoll_event *event,
 	epi->nwait = 0;
 	epi->next = EP_UNACTIVE_PTR;
 	epi->on_list = 0;
-
 	if (epi->event.events & EPOLLWAKEUP) {
 		error = ep_create_wakeup_source(epi);
 		if (error)
@@ -1397,26 +1396,6 @@ static int ep_modify(struct eventpoll *ep, struct epitem *epi, struct epoll_even
 	} else if (ep_has_wakeup_source(epi)) {
 		ep_destroy_wakeup_source(epi);
 	}
-
-	/*
-	 * The following barrier has two effects:
-	 *
-	 * 1) Flush epi changes above to other CPUs.  This ensures
-	 *    we do not miss events from ep_poll_callback if an
-	 *    event occurs immediately after we call f_op->poll().
-	 *    We need this because we did not take ep->lock while
-	 *    changing epi above (but ep_poll_callback does take
-	 *    ep->lock).
-	 *
-	 * 2) We also need to ensure we do not miss _past_ events
-	 *    when calling f_op->poll().  This barrier also
-	 *    pairs with the barrier in wq_has_sleeper (see
-	 *    comments for wq_has_sleeper).
-	 *
-	 * This barrier will now guarantee ep_poll_callback or f_op->poll
-	 * (or both) will notice the readiness of an item.
-	 */
-	smp_mb();
 
 	/*
 	 * The following barrier has two effects:
