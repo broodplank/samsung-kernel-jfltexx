@@ -68,7 +68,7 @@ static unsigned int min_range = 108000;
 #endif
 
 #if defined(SMART_UP_SLOW_UP_AT_HIGH_FREQ)
-#define SUP_SLOW_UP_FREQUENCY			(1458400)
+#define SUP_SLOW_UP_FREQUENCY			(1458000)
 #define SUP_SLOW_UP_LOAD			(75)
 
 typedef struct {
@@ -207,7 +207,7 @@ static struct dbs_tuners {
 	.smart_slow_up_dur = SUP_SLOW_UP_DUR_DEFAULT,
 	.smart_each_off = 0,
 	.io_is_busy = 0,
-	.input_boost_freq = 1458400,
+	.input_boost_freq = 1458000,
 	.boostpulse_duration = 900000,
 	.sampling_rate = DEF_SAMPLING_RATE,
 };

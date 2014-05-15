@@ -329,8 +329,9 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 static int __init cpufreq_gov_darkness_init(void)
 {
 	darkness_wq = alloc_workqueue("darkness_wq",
-				WQ_POWER_EFFICIENT, 0);
-//						WQ_HIGHPRI | WQ_UNBOUND, 0);
+						WQ_HIGHPRI | WQ_UNBOUND, 0);
+//				WQ_POWER_EFFICIENT, 0);
+
 	if (!darkness_wq) {
 		printk(KERN_ERR "Failed to create darkness workqueue\n");
 		return -EFAULT;
