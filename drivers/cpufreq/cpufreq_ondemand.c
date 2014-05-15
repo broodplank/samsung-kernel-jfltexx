@@ -212,7 +212,9 @@ static struct dbs_tuners {
 	.sampling_rate = DEF_SAMPLING_RATE,
 };
 
-//extern u64 last_input_time;
+#ifdef CONFIG_CPU_BOOST
+extern u64 last_input_time;
+#endif
 
 static inline u64 get_cpu_iowait_time(unsigned int cpu, u64 *wall)
 {
@@ -894,11 +896,12 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 	unsigned int max_load_other_cpu = 0;
 	struct cpufreq_policy *policy;
 	unsigned int j;
-	bool boosted = false;
-/*
+#ifdef CONFIG_CPU_BOOST
 	bool boosted = ktime_to_us(ktime_get()) <
 		(last_input_time + dbs_tuners_ins.boostpulse_duration);
-*/
+#else
+	bool boosted = false;
+#endif
 
 	this_dbs_info->freq_lo = 0;
 	policy = this_dbs_info->cur_policy;
