@@ -45,6 +45,7 @@
 		if (timeout_us && ktime_compare(ktime_get(), timeout) > 0) { \
 			(val) = readl(addr); \
 			break; \
+		} \
 		if (sleep_us) \
 			usleep_range(DIV_ROUND_UP(sleep_us, 4), sleep_us); \
 	} \
