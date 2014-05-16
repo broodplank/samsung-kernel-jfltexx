@@ -1441,7 +1441,8 @@ msmsdcc_data_err(struct msmsdcc_host *host, struct mmc_data *data,
 			}
 		}
 
-		/* CRC is optional for the bus test commands, not all
+		/*
+		 * CRC is optional for the bus test commands, not all
 		 * cards respond back with CRC. However controller
 		 * waits for the CRC and times out. Hence ignore the
 		 * data timeouts during the Bustest.
