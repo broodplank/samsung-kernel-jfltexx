@@ -298,7 +298,7 @@
  * The minimum number of bits of entropy before we wake up a read on
  * /dev/random.  Should be enough to do a significant reseed.
  */
-static int random_read_wakeup_thresh = 64;
+static int random_read_wakeup_thresh = 1024;
 
 /*
  * If the entropy count falls under this number of bits, then we
@@ -484,7 +484,7 @@ static __u32 const twist_table[8] = {
  * the entropy is concentrated in the low-order bits.
  */
 static void _mix_pool_bytes(struct entropy_store *r, const void *in,
-			    int nbytes, __u8 out[64])
+				   int nbytes, __u8 out[64])
 {
 	unsigned long i, j, tap1, tap2, tap3, tap4, tap5;
 	int input_rotate;
@@ -1263,6 +1263,7 @@ static void init_std_data(struct entropy_store *r)
  * take care not to overwrite the precious per platform data
  * we were given.
  */
+
 static int rand_initialize(void)
 {
 	init_std_data(&input_pool);
