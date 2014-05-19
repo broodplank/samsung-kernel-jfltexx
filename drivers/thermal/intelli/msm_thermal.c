@@ -323,8 +323,6 @@ static void __ref disable_msm_thermal(void)
 	/* make sure check_temp is no longer running */
 	cancel_delayed_work_sync(&check_temp_work);
 
-	flush_workqueue(intellithermal_wq);
-
 	if (limited_max_freq_thermal == MSM_CPUFREQ_NO_LIMIT)
 		return;
 

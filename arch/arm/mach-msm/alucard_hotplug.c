@@ -349,7 +349,7 @@ static int __cpuinit hotplug_work_fn(struct work_struct *work)
 		force_cpu_up = false;
 
 	delay = msecs_to_jiffies(sampling_rate);
-	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work, delay);
+	queue_delayed_work(alucardhp_wq, &alucard_hotplug_work, delay);
 }
 
 #if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
@@ -453,7 +453,7 @@ static int hotplug_start(void)
 	int ret = 0;
 
 	alucardhp_wq = alloc_workqueue("alucardplug",
-				WQ_POWER_EFFICIENT, 0);
+				WQ_FREEZABLE | WQ_POWER_EFFICIENT, 0);
 //				WQ_HIGHPRI | WQ_FREEZABLE, 1);
 //				WQ_HIGHPRI | WQ_UNBOUND, 0);
 
@@ -499,7 +499,7 @@ static int hotplug_start(void)
 
 	init_rq_avg_stats;
 	INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
-	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
+	queue_delayed_work(alucardhp_wq, &alucard_hotplug_work,
 						delay);
 
 #if defined(CONFIG_POWERSUSPEND)
