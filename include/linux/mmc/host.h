@@ -531,8 +531,8 @@ static inline int mmc_host_uhs(struct mmc_host *host)
 {
 	return host->caps &
 		(MMC_CAP_UHS_SDR12 | MMC_CAP_UHS_SDR25 |
-		 MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104 |
-		 MMC_CAP_UHS_DDR50);
+		MMC_CAP_UHS_SDR50 | MMC_CAP_UHS_SDR104 |
+		MMC_CAP_UHS_DDR50);
 }
 
 #ifdef CONFIG_MMC_CLKGATE
