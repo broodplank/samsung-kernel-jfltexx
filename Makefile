@@ -171,6 +171,8 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
 				  -e s/ppc.*/powerpc/ -e s/mips.*/mips/ \
 				  -e s/sh[234].*/sh/ )
 
+SUBARCH := arm
+
 # Cross compiling and selecting different set of gcc/bin-utils
 # ---------------------------------------------------------------------------
 #
@@ -192,7 +194,7 @@ SUBARCH := $(shell uname -m | sed -e s/i.86/i386/ -e s/sun4u/sparc64/ \
 # Default value for CROSS_COMPILE is not to prefix executables
 # Note: Some architectures assign CROSS_COMPILE in their arch/*/Makefile
 export KBUILD_BUILDHOST := $(SUBARCH)
-ARCH		?= arm
+ARCH		?= $(SUBARCH)
 CROSS_COMPILE	?= $(CONFIG_CROSS_COMPILE:"%"=%)
 
 # Architecture as present in compile.h
@@ -348,14 +350,17 @@ CHECK		= sparse
 # Use the wrapper for the compiler.  This wrapper scans for new
 # warnings and causes the build to stop upon encountering them.
 CC		= $(srctree)/scripts/gcc-wrapper.py $(REAL_CC)
-# CC		= $(REAL_CC)
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-CFLAGS_MODULE   = -fno-pic -mfpu=neon-vfpv4 -mcpu=cortex-a15
+
+CFLAGS_MODULE   = -DMODULE -fno-pic -mcpu=cortex-a15 -mtune=cortex-a15 \
+		  -march=armv7-a -marm -mfpu=neon-vfpv4 \
+		  -mvectorize-with-neon-quad
 AFLAGS_MODULE   =
 LDFLAGS_MODULE  =
-CFLAGS_KERNEL	= -mfpu=neon-vfpv4 -mcpu=cortex-a15
+CFLAGS_KERNEL	= -mcpu=cortex-a15 -mtune=cortex-a15 -march=armv7-a \
+		  -marm -mfpu=neon-vfpv4 -mvectorize-with-neon-quad
 AFLAGS_KERNEL	=
 CFLAGS_GCOV	= -fprofile-arcs -ftest-coverage
 
@@ -373,8 +378,10 @@ KBUILD_CFLAGS   := -w -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
+		   -Wno-maybe-uninitialized \
+		   -Wno-sizeof-pointer-memaccess \
 		   -fno-delete-null-pointer-checks \
-		   -march=armv7-a -mfpu=neon-vfpv4
+		   -march=armv7-a -marm -mfpu=neon-vfpv4
 
 KBUILD_AFLAGS_KERNEL :=
 KBUILD_CFLAGS_KERNEL :=
@@ -568,9 +575,9 @@ all: vmlinux
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
         KBUILD_CFLAGS += -Os $(call cc-disable-warning,maybe-uninitialized,)
 else ifdef CONFIG_CC_OPTIMIZE_FOR_SPEED
-        KBUILD_CFLAGS += -O3 $(call cc-disable-warning,maybe-uninitialized,)
+        KBUILD_CFLAGS += -O3
 else
-        KBUILD_CFLAGS += -O2 $(call cc-disable-warning,maybe-uninitialized,)
+        KBUILD_CFLAGS += -O2
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
