@@ -89,7 +89,6 @@ struct tvec_base {
 struct tvec_base boot_tvec_bases;
 EXPORT_SYMBOL(boot_tvec_bases);
 static DEFINE_PER_CPU(struct tvec_base *, tvec_bases) = &boot_tvec_bases;
-static DEFINE_PER_CPU(int, tvec_base_lock_init) = {-1};
 
 /* Functions below help us manage 'deferrable' flag */
 static inline unsigned int tbase_get_deferrable(struct tvec_base *base)
@@ -1653,7 +1652,6 @@ static int __cpuinit init_timers_cpu(int cpu)
 	int j;
 	struct tvec_base *base;
 	static char __cpuinitdata tvec_base_done[NR_CPUS];
-	int *lock_init = &per_cpu(tvec_base_lock_init, cpu);
 
 	if (!tvec_base_done[cpu]) {
 		static char boot_done;
@@ -1691,11 +1689,6 @@ static int __cpuinit init_timers_cpu(int cpu)
 		base = per_cpu(tvec_bases, cpu);
 	}
 
-	if ((*lock_init) != cpu) {
-		*lock_init = cpu;
-		spin_lock_init(&base->lock);
-		printk(KERN_INFO "tvec base lock initialized for cpu%d\n", cpu);
-	}
 
 	for (j = 0; j < TVN_SIZE; j++) {
 		INIT_LIST_HEAD(base->tv5.vec + j);
