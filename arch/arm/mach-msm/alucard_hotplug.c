@@ -198,16 +198,10 @@ static int __cpuinit hotplug_work_fn(struct work_struct *work)
 		per_cpu(od_hotplug_cpuinfo, 0).up_cpu = -1;
 
 	for_each_cpu_not(cpu, cpu_online_mask) {
-		struct hotplug_cpuinfo *pcpu_info = &per_cpu(od_hotplug_cpuinfo, cpu);
-
 		cpus_off[idx_off] = cpu;
 		++idx_off;
 		++schedule_up_cpu;
 		--schedule_down_cpu;
-
-		pcpu_info->online = false;
-		pcpu_info->up_cpu = -1;
-		pcpu_info->up_by_cpu = -1;
 	}
 
 	for_each_online_cpu(cpu) {
@@ -333,7 +327,7 @@ static int __cpuinit hotplug_work_fn(struct work_struct *work)
 		force_cpu_up = false;
 
 	delay = msecs_to_jiffies(sampling_rate);
-	queue_delayed_work(alucardhp_wq, &alucard_hotplug_work, delay);
+	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work, delay);
 }
 
 #if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
@@ -406,21 +400,6 @@ static void down_cpu_work(unsigned int cpu)
 	pcpu_info->up_by_cpu = -1;
 }
 
-static void up_cpu_work_failed(unsigned int cpu)
-{
-	per_cpu(od_hotplug_cpuinfo, cpu).online = false;
-	per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu = -1;
-
-	pr_debug("AH: Error online core %d\n", cpu);
-}
-
-static void down_cpu_work_failed(unsigned int cpu)
-{
-	per_cpu(od_hotplug_cpuinfo, cpu).online == true;
-
-	pr_debug("AH: Error offline" "core %d\n", cpu);
-}
-
 static int alucard_hotplug_callback(struct notifier_block *nb,
 			unsigned long val, void *data)
 {
@@ -433,7 +412,9 @@ static int alucard_hotplug_callback(struct notifier_block *nb,
 		break;
 	case CPU_UP_CANCELED:
 	case CPU_UP_CANCELED_FROZEN:
-		up_cpu_work_failed(cpu);
+		per_cpu(od_hotplug_cpuinfo, cpu).online = false;
+		per_cpu(od_hotplug_cpuinfo, cpu).up_by_cpu = -1;
+		pr_debug("AH: Error online core %d\n", cpu);
 		break;
 	case CPU_DEAD:
 	case CPU_DEAD_FROZEN:
@@ -441,7 +422,8 @@ static int alucard_hotplug_callback(struct notifier_block *nb,
 		break;
 	case CPU_DOWN_FAILED:
 	case CPU_DOWN_FAILED_FROZEN:
-		down_cpu_work_failed(cpu);
+		per_cpu(od_hotplug_cpuinfo, cpu).online == true;
+		pr_debug("AH: Error offline" "core %d\n", cpu);
 		break;
 	}
 	return NOTIFY_OK;
@@ -456,11 +438,12 @@ static int hotplug_start(void)
 {
 	int delay = msecs_to_jiffies(hotplug_tuners_ins.hotplug_sampling_rate);
 	unsigned int cpu;
+	unsigned int prev_online = 0;
 	int ret = 0;
 
 	alucardhp_wq = alloc_workqueue("alucardplug",
-				WQ_FREEZABLE | WQ_POWER_EFFICIENT, 0);
-//				WQ_HIGHPRI | WQ_FREEZABLE, 1);
+				WQ_HIGHPRI | WQ_FREEZABLE, 1);
+//				WQ_FREEZABLE | WQ_POWER_EFFICIENT, 0);
 //				WQ_HIGHPRI | WQ_UNBOUND, 0);
 
 	if (!alucardhp_wq) {
@@ -491,21 +474,30 @@ static int hotplug_start(void)
 				&pcpu_info->prev_cpu_wall, 0);
 #endif
 		pcpu_info->online = cpu_online(cpu);
-		pcpu_info->up_cpu = 1;
-		pcpu_info->up_by_cpu = -1;
 		pcpu_info->cpu_up_rate = 1;
 		pcpu_info->cpu_down_rate = 1;
 
 		if (pcpu_info->online) {
+			pcpu_info->up_cpu = -1;
+			if (cpu == 0) {
+				pcpu_info->up_by_cpu = -1;
+			} else {
+				pcpu_info->up_by_cpu = prev_online;
+				per_cpu(od_hotplug_cpuinfo, prev_online).up_cpu = cpu;
+			}
+			prev_online = cpu;
 			alucard_hotplug_callback(&alucard_hotplug_nb, CPU_UP_PREPARE, cpu);
 			alucard_hotplug_callback(&alucard_hotplug_nb, CPU_ONLINE, cpu);
+		} else {
+			pcpu_info->up_cpu = -1;
+			pcpu_info->up_by_cpu = -1;
 		}
 	}
 	put_online_cpus();
 
 	init_rq_avg_stats;
 	INIT_DELAYED_WORK(&alucard_hotplug_work, hotplug_work_fn);
-	queue_delayed_work(alucardhp_wq, &alucard_hotplug_work,
+	queue_delayed_work_on(0, alucardhp_wq, &alucard_hotplug_work,
 						delay);
 
 #if defined(CONFIG_POWERSUSPEND)
