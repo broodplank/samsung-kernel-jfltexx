@@ -76,6 +76,8 @@ static unsigned int darkness_enable;	/* number of CPUs using this policy */
  */
 static DEFINE_MUTEX(darkness_mutex);
 
+static struct workqueue_struct *darkness_wq;
+
 /* darkness tuners */
 static struct darkness_tuners {
 	unsigned int sampling_rate;
@@ -228,7 +230,7 @@ static void do_darkness_timer(struct work_struct *work)
 	if (need_load_eval(darkness_cpuinfo, sampling_rate))
 		darkness_check_cpu(darkness_cpuinfo);
 
-	queue_delayed_work_on(cpu, system_wq, &darkness_cpuinfo->work, delay);
+	queue_delayed_work_on(cpu, darkness_wq, &darkness_cpuinfo->work, delay);
 	mutex_unlock(&darkness_cpuinfo->timer_mutex);
 }
 
@@ -284,7 +286,7 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 
 		this_darkness_cpuinfo->enable = 1;
 		INIT_DEFERRABLE_WORK(&this_darkness_cpuinfo->work, do_darkness_timer);
-		queue_delayed_work_on(this_darkness_cpuinfo->cpu, system_wq, &this_darkness_cpuinfo->work, delay);
+		queue_delayed_work_on(this_darkness_cpuinfo->cpu, darkness_wq, &this_darkness_cpuinfo->work, delay);
 
 		break;
 
@@ -326,11 +328,19 @@ static int cpufreq_governor_darkness(struct cpufreq_policy *policy,
 
 static int __init cpufreq_gov_darkness_init(void)
 {
+	darkness_wq = alloc_workqueue("darkness_wq", WQ_HIGHPRI, 0);
+
+	if (!darkness_wq) {
+		printk(KERN_ERR "Failed to create alucard workqueue\n");
+		return -EFAULT;
+	}
+
 	return cpufreq_register_governor(&cpufreq_gov_darkness);
 }
 
 static void __exit cpufreq_gov_darkness_exit(void)
 {
+	destroy_workqueue(darkness_wq);
 	cpufreq_unregister_governor(&cpufreq_gov_darkness);
 }
 

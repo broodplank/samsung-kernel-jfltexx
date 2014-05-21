@@ -66,6 +66,8 @@ struct cpufreq_alucard_cpuinfo {
 
 static DEFINE_PER_CPU(struct cpufreq_alucard_cpuinfo, od_alucard_cpuinfo);
 
+static struct workqueue_struct *alucard_wq;
+
 static unsigned int alucard_enable;	/* number of CPUs using this policy */
 /*
  * alucard_mutex protects alucard_enable in governor start/stop.
@@ -418,7 +420,7 @@ static void do_alucard_timer(struct work_struct *work)
 	if (need_load_eval(alucard_cpuinfo, sampling_rate))
 		alucard_check_cpu(alucard_cpuinfo);
 
-	queue_delayed_work_on(cpu, system_wq, &alucard_cpuinfo->work, delay);
+	queue_delayed_work_on(cpu, alucard_wq, &alucard_cpuinfo->work, delay);
 	mutex_unlock(&alucard_cpuinfo->timer_mutex);
 }
 
@@ -474,7 +476,7 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 
 		this_alucard_cpuinfo->enable = 1;
 		INIT_DEFERRABLE_WORK(&this_alucard_cpuinfo->work, do_alucard_timer);
-		queue_delayed_work_on(this_alucard_cpuinfo->cpu, system_wq, &this_alucard_cpuinfo->work, delay);
+		queue_delayed_work_on(this_alucard_cpuinfo->cpu, alucard_wq, &this_alucard_cpuinfo->work, delay);
 
 		break;
 
@@ -516,11 +518,19 @@ static int cpufreq_governor_alucard(struct cpufreq_policy *policy,
 
 static int __init cpufreq_gov_alucard_init(void)
 {
+	alucard_wq = alloc_workqueue("alucard_wq", WQ_HIGHPRI, 0);
+
+	if (!alucard_wq) {
+		printk(KERN_ERR "Failed to create alucard workqueue\n");
+		return -EFAULT;
+	}
+
 	return cpufreq_register_governor(&cpufreq_gov_alucard);
 }
 
 static void __exit cpufreq_gov_alucard_exit(void)
 {
+	destroy_workqueue(alucard_wq);
 	cpufreq_unregister_governor(&cpufreq_gov_alucard);
 }
 
