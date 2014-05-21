@@ -628,7 +628,7 @@ static int __init cpufreq_gov_nightmare_init(void)
 	nightmare_wq = alloc_workqueue("nightmare_wq", WQ_HIGHPRI, 0);
 
 	if (!nightmare_wq) {
-		printk(KERN_ERR "Failed to create alucard workqueue\n");
+		printk(KERN_ERR "Failed to create nightmare workqueue\n");
 		return -EFAULT;
 	}
 

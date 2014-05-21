@@ -331,7 +331,7 @@ static int __init cpufreq_gov_darkness_init(void)
 	darkness_wq = alloc_workqueue("darkness_wq", WQ_HIGHPRI, 0);
 
 	if (!darkness_wq) {
-		printk(KERN_ERR "Failed to create alucard workqueue\n");
+		printk(KERN_ERR "Failed to create darkness workqueue\n");
 		return -EFAULT;
 	}
 
