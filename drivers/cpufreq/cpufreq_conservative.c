@@ -515,9 +515,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 					&dbs_cpufreq_notifier_block,
 					CPUFREQ_TRANSITION_NOTIFIER);
 		}
-		mutex_unlock(&dbs_mutex);
-
 		mutex_init(&this_dbs_info->timer_mutex);
+
+		mutex_unlock(&dbs_mutex);
 
 		dbs_timer_init(this_dbs_info);
 

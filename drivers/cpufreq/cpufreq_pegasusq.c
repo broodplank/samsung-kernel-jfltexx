@@ -612,9 +612,9 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 			dbs_tuners_ins.sampling_rate = DEF_SAMPLING_RATE;
 			dbs_tuners_ins.io_is_busy = 0;
 		}
-		mutex_unlock(&dbs_mutex);
-
 		mutex_init(&this_dbs_info->timer_mutex);
+
+		mutex_unlock(&dbs_mutex);
 
 		dbs_timer_init(this_dbs_info);
 
