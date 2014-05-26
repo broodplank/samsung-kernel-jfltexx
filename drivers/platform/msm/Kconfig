@@ -80,6 +80,26 @@ config MSM_AVTIMER
 	tristate "Avtimer Driver"
 	depends on ARCH_MSM8960
 	help
-	  This driver gets the Q6 out of power collapsed state and
-          exposes ioctl control to read avtimer tick.
+		This driver gets the Q6 out of power collapsed state and
+		exposes ioctl control to read avtimer tick.
+
+config PFT
+	bool "Per-File-Tagger driver"
+	default n
+	help
+		This driver is used for tagging enterprise files.
+		It is part of the Per-File-Encryption (PFE) feature.
+		The driver is tagging files when created by
+		registered application.
+		Tagged files are encrypted using the dm-req-crypt driver.
+
+config SSM
+	tristate "Qualcomm Secure Service Module"
+	depends on QSEECOM
+	depends on MSM_SMD
+	help
+	  Provides an interface for OEM driver to communicate with Trustzone
+	  and modem for key exchange and mode change.
+	  This driver uses Secure Channel Manager interface for trustzone
+	  communication and communicates with modem over SMD channel.
 endmenu
