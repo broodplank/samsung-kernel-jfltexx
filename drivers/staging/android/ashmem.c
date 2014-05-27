@@ -16,6 +16,8 @@
 ** GNU General Public License for more details.
 */
 
+#define pr_fmt(fmt) "ashmem: " fmt
+
 #include <linux/module.h>
 #include <linux/file.h>
 #include <linux/fs.h>
@@ -373,7 +375,19 @@ static int ashmem_shrink(struct shrinker *s, struct shrink_control *sc)
 	if (!sc->nr_to_scan)
 		return lru_count;
 
+/*                                                                                    
+                                                                                                        
+                                                                   
+                                                   */
+#if 0
 	mutex_lock(&ashmem_mutex);
+#else
+	if (!mutex_trylock(&ashmem_mutex)) {
+		return -1; 
+	}
+#endif
+/*                                                                                     */
+
 	list_for_each_entry_safe(range, next, &ashmem_lru_list, lru) {
 		struct inode *inode = range->asma->file->f_dentry->d_inode;
 		loff_t start = range->pgstart * PAGE_SIZE;
@@ -869,7 +883,7 @@ static int __init ashmem_init(void)
 					  sizeof(struct ashmem_area),
 					  0, 0, NULL);
 	if (unlikely(!ashmem_area_cachep)) {
-		printk(KERN_ERR "ashmem: failed to create slab cache\n");
+		pr_err("failed to create slab cache\n");
 		return -ENOMEM;
 	}
 
@@ -877,19 +891,19 @@ static int __init ashmem_init(void)
 					  sizeof(struct ashmem_range),
 					  0, 0, NULL);
 	if (unlikely(!ashmem_range_cachep)) {
-		printk(KERN_ERR "ashmem: failed to create slab cache\n");
+		pr_err("failed to create slab cache\n");
 		return -ENOMEM;
 	}
 
 	ret = misc_register(&ashmem_misc);
 	if (unlikely(ret)) {
-		printk(KERN_ERR "ashmem: failed to register misc device!\n");
+		pr_err("failed to register misc device!\n");
 		return ret;
 	}
 
 	register_shrinker(&ashmem_shrinker);
 
-	printk(KERN_INFO "ashmem: initialized\n");
+	pr_info("initialized\n");
 
 	return 0;
 }
@@ -902,12 +916,12 @@ static void __exit ashmem_exit(void)
 
 	ret = misc_deregister(&ashmem_misc);
 	if (unlikely(ret))
-		printk(KERN_ERR "ashmem: failed to unregister misc device!\n");
+		pr_err("failed to unregister misc device!\n");
 
 	kmem_cache_destroy(ashmem_range_cachep);
 	kmem_cache_destroy(ashmem_area_cachep);
 
-	printk(KERN_INFO "ashmem: unloaded\n");
+	pr_info("unloaded\n");
 }
 
 module_init(ashmem_init);
