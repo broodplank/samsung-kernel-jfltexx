@@ -20,10 +20,15 @@
 #include <linux/device.h>
 #include <linux/slab.h>
 #include <linux/cpufreq.h>
-#ifdef CONFIG_MACH_LGE
-#include <linux/lcd_notify.h>
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef defined(CONFIG_POWERSUSPEND)
+#include <linux/powersuspend.h>
+#else
 #include <linux/earlysuspend.h>
+#endif
+#include <linux/mutex.h>
+#else
+#include <linux/lcd_notify.h>
 #endif
 #include <linux/input.h>
 #include <linux/math64.h>
@@ -42,6 +47,11 @@
 #define DEFAULT_MIN_CPUS_ONLINE	1
 #define DEFAULT_MAX_CPUS_ONLINE	NR_CPUS
 #define DEFAULT_FAST_LANE_LOAD	95
+
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
+static DEFINE_MUTEX(msm_hotplug_mutex);
+static bool hotplug_suspended = false;
+#endif
 
 static unsigned int debug = 0;
 module_param_named(debug_mask, debug, uint, 0644);
@@ -65,9 +75,10 @@ static struct cpu_hotplug {
 	unsigned int fast_lane_load;
 	struct work_struct up_work;
 	struct work_struct down_work;
-	struct work_struct suspend_work;
+#if !defined(CONFIG_POWERSUSPEND) && !defined(CONFIG_HAS_EARLYSUSPEND)
 	struct work_struct resume_work;
 	struct notifier_block notif;
+#endif
 } hotplug = {
 	.msm_enabled = HOTPLUG_ENABLED,
 	.min_cpus_online = DEFAULT_MIN_CPUS_ONLINE,
@@ -394,7 +405,7 @@ static void offline_cpu(unsigned int target)
 
 	online_cpus = num_online_cpus();
 
-	/* 
+	/*
 	 * Do not offline more CPUs if min_cpus_online reached
 	 * and cancel offline task if target already achieved.
 	 */
@@ -421,6 +432,13 @@ static void msm_hotplug_work(struct work_struct *work)
 {
 	unsigned int cur_load, online_cpus, target = 0;
 	unsigned int i;
+
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
+	if (hotplug_suspended) {
+		dprintk("msm_hotplug is suspended!\n");
+		return;
+	}
+#endif
 
 	update_load_stats();
 
@@ -471,6 +489,67 @@ reschedule:
 	reschedule_hotplug_work();
 }
 
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
+#ifdef CONFIG_POWERSUSPEND
+static void msm_hotplug_suspend(struct power_suspend *handler)
+#else
+static void msm_hotplug_suspend(struct early_suspend *handler)
+#endif
+{
+	int cpu;
+
+	if (!hotplug.msm_enabled)
+		return;
+
+	/* Flush hotplug workqueue */
+	flush_workqueue(hotplug_wq);
+	cancel_delayed_work_sync(&hotplug_work);
+
+	mutex_lock(&msm_hotplug_mutex);
+	hotplug_suspended = true;
+	mutex_unlock(&msm_hotplug_mutex);
+
+	/* Put all sibling cores to sleep */
+	for_each_online_cpu(cpu) {
+		if (cpu == 0)
+			continue;
+		cpu_down(cpu);
+	}
+}
+
+static void __ref msm_hotplug_resume(struct power_suspend *handler)
+{
+	int cpu;
+
+	if (!hotplug.msm_enabled)
+		return;
+
+	mutex_lock(&msm_hotplug_mutex);
+	hotplug_suspended = false;
+	mutex_unlock(&msm_hotplug_mutex);
+
+	/* Fire up all CPUs */
+	for_each_cpu_not(cpu, cpu_online_mask) {
+		if (cpu == 0)
+			continue;
+		cpu_up(cpu);
+		apply_down_lock(cpu);
+	}
+
+	/* Resume hotplug workqueue */
+	reschedule_hotplug_work();
+}
+#ifdef CONFIG_POWERSUSPEND
+static struct power_suspend msm_hotplug_power_suspend_driver = {
+#else
+static struct early_suspend msm_hotplug_early_suspend_driver = {
+	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
+#endif
+	.suspend = msm_hotplug_suspend,
+	.resume = msm_hotplug_resume,
+};
+#else
+
 static void __ref msm_hotplug_resume_work(struct work_struct *work)
 {
 	int cpu;
@@ -486,23 +565,35 @@ static void __ref msm_hotplug_resume_work(struct work_struct *work)
 		apply_down_lock(cpu);
 	}
 }
+#endif
 
-#ifdef CONFIG_MACH_LGE
+#if !defined(CONFIG_POWERSUSPEND) && !defined(CONFIG_HAS_EARLYSUSPEND)
 static int lcd_notifier_callback(struct notifier_block *nb,
                                  unsigned long event, void *data)
 {
-        if (event == LCD_EVENT_ON_START)
+	if (!hotplug.msm_enabled)
+		return;
+
+	if (event == LCD_EVENT_ON_START)
 		schedule_work(&hotplug.resume_work);
 
-        return 0;
+	return 0;
 }
 #endif
 
 static void hotplug_input_event(struct input_handle *handle, unsigned int type,
 				unsigned int code, int value)
 {
-	u64 now = ktime_to_us(ktime_get());
+	u64 now;
 
+#if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
+	if (hotplug_suspended) {
+		dprintk("msm_hotplug is suspended!\n");
+		return;
+	}
+#endif
+
+	now = ktime_to_us(ktime_get());
 	hotplug.last_input = now;
 	if (now - last_boost_time < MIN_INPUT_INTERVAL)
 		return;
@@ -569,26 +660,7 @@ static struct input_handler hotplug_input_handler = {
 	.id_table	= hotplug_ids,
 };
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(CONFIG_MACH_LGE)
-static void __ref msm_hotplug_early_suspend(struct early_suspend *handler)
-{
-}
-
-static void __cpuinit msm_hotplug_late_resume(
-				struct early_suspend *handler)
-{
-	if (hotplug.msm_enabled > 0)
-		schedule_work(&hotplug.resume_work);
-}
-
-static struct early_suspend msm_hotplug_early_suspend_driver = {
-	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB + 10,
-	.suspend = msm_hotplug_early_suspend,
-	.resume = msm_hotplug_late_resume,
-};
-#endif  /* CONFIG_HAS_EARLYSUSPEND */
-
-static int hotplug_start(void)
+static int __ref msm_hotplug_start(void)
 {
 	int cpu, ret = 0;
 	struct down_lock *dl;
@@ -602,7 +674,7 @@ static int hotplug_start(void)
 		goto err_out;
 	}
 
-#ifdef CONFIG_MACH_LGE
+#if !defined(CONFIG_POWERSUSPEND) && !defined(CONFIG_HAS_EARLYSUSPEND)
 	hotplug.notif.notifier_call = lcd_notifier_callback;
         if (lcd_register_client(&hotplug.notif) != 0) {
                 pr_err("%s: Failed to register LCD notifier callback\n",
@@ -630,17 +702,29 @@ static int hotplug_start(void)
 	INIT_DELAYED_WORK(&hotplug_work, msm_hotplug_work);
 	INIT_WORK(&hotplug.up_work, cpu_up_work);
 	INIT_WORK(&hotplug.down_work, cpu_down_work);
+#if !defined(CONFIG_POWERSUSPEND) && !defined(CONFIG_HAS_EARLYSUSPEND)
 	INIT_WORK(&hotplug.resume_work, msm_hotplug_resume_work);
+#endif
 
 	for_each_possible_cpu(cpu) {
 		dl = &per_cpu(lock_info, cpu);
 		INIT_DELAYED_WORK(&dl->lock_rem, remove_down_lock);
 	}
 
-	queue_delayed_work_on(0, hotplug_wq, &hotplug_work,
-					      START_DELAY);
+	/* Fire up all CPUs */
+	for_each_cpu_not(cpu, cpu_online_mask) {
+		if (cpu == 0)
+			continue;
+		cpu_up(cpu);
+		apply_down_lock(cpu);
+	}
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(CONFIG_MACH_LGE)
+	queue_delayed_work_on(0, hotplug_wq, &hotplug_work,
+							START_DELAY);
+
+#ifdef defined(CONFIG_POWERSUSPEND)
+	register_power_suspend(&msm_hotplug_power_suspend_driver);
+#elif defined(CONFIG_HAS_EARLYSUSPEND)
 	register_early_suspend(&msm_hotplug_early_suspend_driver);
 #endif
 
@@ -651,39 +735,49 @@ err_input:
 err_dev:
 	destroy_workqueue(hotplug_wq);
 err_out:
+	hotplug.msm_enabled = 0;
 	return ret;
 }
 
-static int hotplug_stop(void)
+static void msm_hotplug_stop(void)
 {
 	int cpu;
+	struct down_lock *dl;
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && !defined(CONFIG_MACH_LGE)
+#if defined(CONFIG_POWERSUSPEND)
+	unregister_power_suspend(&msm_hotplug_power_suspend_driver);
+#elif defined(CONFIG_HAS_EARLYSUSPEND)
 	unregister_early_suspend(&msm_hotplug_early_suspend_driver);
 #endif
 
 	input_unregister_handler(&hotplug_input_handler);
 
+	for_each_possible_cpu(cpu) {
+		dl = &per_cpu(lock_info, cpu);
+		cancel_delayed_work_sync(&dl->lock_rem);
+	}
+	cancel_work_sync(&hotplug.down_work);
+	cancel_work_sync(&hotplug.up_work);
+
 	flush_workqueue(hotplug_wq);
 	cancel_delayed_work_sync(&hotplug_work);
 
 	mutex_destroy(&stats.stats_mutex);
+	kfree(stats.load_hist);
 
+
+#if !defined(CONFIG_POWERSUSPEND) && !defined(CONFIG_HAS_EARLYSUSPEND)
+	hotplug.notif.notifier_call = NULL;
+#endif
+
+	destroy_workqueue(hotplug_wq);
+
+	/* Put all sibling cores to sleep */
 	for_each_online_cpu(cpu) {
 		if (cpu == 0)
 			continue;
 		cpu_down(cpu);
 	}
-
-#ifdef CONFIG_MACH_LGE
-	hotplug.notif.notifier_call = NULL;
-#endif
-
-	kfree(stats.load_hist);
-
-	destroy_workqueue(hotplug_wq);
-
-	return 0;
 }
 
 /************************** sysfs interface ************************/
@@ -699,7 +793,7 @@ static ssize_t store_enable_hotplug(struct device *dev,
 				    struct device_attribute *msm_hotplug_attrs,
 				    const char *buf, size_t count)
 {
-	int ret, cpu;
+	int ret;
 	unsigned int val;
 
 	ret = sscanf(buf, "%u", &val);
@@ -712,9 +806,9 @@ static ssize_t store_enable_hotplug(struct device *dev,
 	hotplug.msm_enabled = val;
 
 	if (hotplug.msm_enabled)
-		hotplug_start();
+		ret = msm_hotplug_start();
 	else
-		hotplug_stop();
+		msm_hotplug_stop();
 
 	return count;
 }
@@ -853,7 +947,6 @@ static ssize_t store_history_size(struct device *dev,
 
 	if (hotplug.msm_enabled)
 		reschedule_hotplug_work();
-
 
 	return count;
 }
@@ -1043,13 +1136,15 @@ static int __devinit msm_hotplug_probe(struct platform_device *pdev)
 		goto err_dev;
 	}
 
-	if (hotplug.msm_enabled)
-		ret = hotplug_start();
+	if (hotplug.msm_enabled) {
+		ret = msm_hotplug_start();
+		if (ret != 0)
+			goto err_dev;
+	}
 
 	return ret;
 err_dev:
 	module_kobj = NULL;
-err_out:
 	return ret;
 }
 
@@ -1061,7 +1156,7 @@ static struct platform_device msm_hotplug_device = {
 static int msm_hotplug_remove(struct platform_device *pdev)
 {
 	if (hotplug.msm_enabled)
-		hotplug_stop();
+		msm_hotplug_stop();
 
 	return 0;
 }
