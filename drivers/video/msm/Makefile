@@ -77,6 +77,7 @@ obj-$(CONFIG_FB_MSM_EXTMDDI) += msm_mddi_ext.o
 # MIPI gereric
 msm_mipi-objs := mipi_dsi.o mipi_dsi_host.o
 obj-$(CONFIG_FB_MSM_MIPI_DSI) += msm_mipi.o
+obj-$(CONFIG_MACH_JF) += lcd_notify.o
 
 # MIPI manufacture
 obj-$(CONFIG_FB_MSM_MIPI_DSI_TOSHIBA) += mipi_toshiba.o
