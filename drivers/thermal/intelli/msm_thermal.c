@@ -128,9 +128,17 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 		pr_info("%s: Max frequency reset for cpu%d\n",
 				KBUILD_MODNAME, cpu);
 
+#if 0
+	/* Frequency of cpu target is already limited so this following code is useless */
 	if (cpu_online(cpu)) {
-		ret = cpufreq_update_policy(cpu);
+		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
+		if (!policy)
+			return ret;
+		ret = cpufreq_driver_target(policy, policy->cur,
+				CPUFREQ_RELATION_H);
+		cpufreq_cpu_put(policy);
 	}
+#endif
 
 	return ret;
 }
@@ -293,7 +301,7 @@ static void __cpuinit check_temp(struct work_struct *work)
 	/* pr_info("msm_thermal: worker is alive!\n"); */
 reschedule:
 	if (enabled) {
-		queue_delayed_work(system_power_efficient_wq, &check_temp_work,
+		schedule_delayed_work(&check_temp_work,
 						msecs_to_jiffies(msm_thermal_info.poll_ms));
 	}
 }
@@ -355,7 +363,7 @@ static int __cpuinit set_enabled(const char *val, const struct kernel_param *kp)
 	} else {
 		if (!enabled) {
 			enabled = 1;
-			queue_delayed_work(system_power_efficient_wq, &check_temp_work, 10);
+			schedule_delayed_work(&check_temp_work, 10);
 			pr_info("msm_thermal: rescheduling...\n");
 		} else
 			pr_info("msm_thermal: already running...\n");
@@ -614,7 +622,7 @@ int __init msm_thermal_init(struct msm_thermal_data *pdata)
 		core_control_enabled = 1;
 
 	INIT_DELAYED_WORK(&check_temp_work, check_temp);
-	queue_delayed_work(system_power_efficient_wq, &check_temp_work, 10);
+	schedule_delayed_work(&check_temp_work, 10);
 
 	if (num_possible_cpus() > 1)
 		register_cpu_notifier(&msm_thermal_cpu_notifier);
