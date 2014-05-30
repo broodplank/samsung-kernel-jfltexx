@@ -1096,6 +1096,12 @@ config ESD_ERR_FG_RECOVERY
 	bool "ESD RECOVERY BY ERR_FG"
 	default n
 
+config LCD_NOTIFY
+	bool "Enable lcd notify"
+	default n
+	help
+	  Call lcd notify handlers when the user requested sleep state
+
 if FB_MSM_MDSS
 	source "drivers/video/msm/mdss/Kconfig"
 endif

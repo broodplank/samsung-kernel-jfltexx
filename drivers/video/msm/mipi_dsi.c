@@ -34,7 +34,7 @@
 #include "mipi_dsi.h"
 #include "mdp.h"
 #include "mdp4.h"
-#ifdef CONFIG_MACH_JF
+#ifdef CONFIG_LCD_NOTIFY
 #include <linux/lcd_notify.h>
 #endif
 
@@ -136,9 +136,9 @@ static int mipi_dsi_off(struct platform_device *pdev)
 	mipi_dsi_unprepare_clocks();
 	mipi_dsi_unprepare_ahb_clocks();
 
-	#if defined(CONFIG_MACH_JF)
-		lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
-	#endif
+#ifdef CONFIG_LCD_NOTIFY
+	lcd_notifier_call_chain(LCD_EVENT_ON_END, NULL);
+#endif
 
 	usleep(5000);
 
@@ -226,7 +226,7 @@ static int mipi_dsi_on(struct platform_device *pdev)
 		mipi_dsi_pdata->panel_power_save(1);
 #endif
 
-#if defined(CONFIG_MACH_JF)
+#ifdef CONFIG_LCD_NOTIFY
 	lcd_notifier_call_chain(LCD_EVENT_ON_START, NULL);
 #endif
 
