@@ -15,6 +15,7 @@
 #ifdef CONFIG_USB_HOST_NOTIFY
 #include "../../arch/arm/mach-msm/board-8064.h"
 #endif
+#include <linux/fastchg.h>
 
 #define ENABLE 1
 #define DISABLE 0
@@ -263,9 +264,9 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 				if ((chg_state != POWER_SUPPLY_STATUS_CHARGING) &&
 						(chg_state != POWER_SUPPLY_STATUS_FULL))
 					break;
-				/* under 500mA, slow rate */
-				if (set_current_reg < (500 / 20) &&
-						(charger->cable_type == POWER_SUPPLY_TYPE_MAINS))
+				/* under 400mA, slow rate */
+				if (set_current_reg < (400 / 20) &&
+						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
 					charger->aicl_on = true;
 				else
 					charger->aicl_on = false;
@@ -319,9 +320,9 @@ static void max77693_set_input_current(struct max77693_charger_data *charger,
 					(chg_state != POWER_SUPPLY_STATUS_FULL))
 				goto exit;
 			if (curr_step < 2) {
-				/* under 500mA, slow rate */
-				if (now_current_reg < (500 / 20) &&
-						(charger->cable_type == POWER_SUPPLY_TYPE_MAINS))
+				/* under 400mA, slow rate */
+				if (now_current_reg < (400 / 20) &&
+						(charger->cable_type != POWER_SUPPLY_TYPE_BATTERY))
 					charger->aicl_on = true;
 				else
 					charger->aicl_on = false;
@@ -466,7 +467,7 @@ static void max77693_recovery_work(struct work_struct *work)
 		(chgin_dtls == 0x3) && (chg_dtls != 0x8) && (byp_dtls == 0x0))) {
 		pr_info("%s: try to recovery, cnt(%d)\n", __func__,
 				(chg_data->soft_reg_recovery_cnt + 1));
-		if (chg_data->siop_level < 100 &&
+		if (screen_on_current_limit && chg_data->siop_level < 100 &&
 				chg_data->cable_type == POWER_SUPPLY_TYPE_MAINS) {
 			pr_info("%s : LCD on status and revocer current\n", __func__);
 			max77693_set_input_current(chg_data,
@@ -798,7 +799,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 				set_charging_current_max =
 					charger->charging_current_max;
 
-			if (charger->siop_level < 100 &&
+			if (screen_on_current_limit && charger->siop_level < 100 &&
 					val->intval == POWER_SUPPLY_TYPE_MAINS) {
 				set_charging_current_max = SIOP_INPUT_LIMIT_CURRENT;
 				if (set_charging_current > SIOP_CHARGING_LIMIT_CURRENT)
@@ -839,8 +840,7 @@ static int sec_chg_set_property(struct power_supply *psy,
 		charger->siop_level = val->intval;
 		if (charger->is_charging) {
 			/* decrease the charging current according to siop level */
-			int current_now;
-			current_now = 
+			int current_now =
 				charger->charging_current * val->intval / 100;
 
 			if (current_now > 0 &&
@@ -849,14 +849,14 @@ static int sec_chg_set_property(struct power_supply *psy,
 
 			/* do forced set charging current */
 			if (charger->cable_type == POWER_SUPPLY_TYPE_MAINS) {
-				if (charger->siop_level < 100 )
+				if (screen_on_current_limit && charger->siop_level < 100 )
 					set_charging_current_max =
 						SIOP_INPUT_LIMIT_CURRENT;
 				else
 					set_charging_current_max =
 						charger->charging_current_max;
 
-				if (charger->siop_level < 100 && current_now > SIOP_CHARGING_LIMIT_CURRENT)
+				if (screen_on_current_limit && charger->siop_level < 100 && current_now > SIOP_CHARGING_LIMIT_CURRENT)
 					current_now = SIOP_CHARGING_LIMIT_CURRENT;
 				max77693_set_input_current(charger,
 						set_charging_current_max);
@@ -1057,6 +1057,10 @@ static void wpc_detect_work(struct work_struct *work)
 	u8 reg_data;
 	pr_debug("%s\n", __func__);
 	wake_unlock(&chg_data->wpc_wake_lock);
+
+	reg_data = (0 << WCIN_SHIFT);
+	max77693_update_reg(chg_data->max77693->i2c, MAX77693_CHG_REG_CHG_INT_MASK, reg_data,
+			WCIN_MASK);
 
 	/* get status of cable*/
 	psy_do_property("battery", get,
@@ -1329,7 +1333,9 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 	struct max77693_platform_data *pdata = dev_get_platdata(iodev->dev);
 	struct max77693_charger_data *charger;
 	int ret = 0;
+#if defined(CONFIG_CHARGER_MAX77803) || defined(CONFIG_MACH_JF)
 	u8 reg_data;
+#endif
 
 	pr_info("%s: MAX77693 Charger driver probe\n", __func__);
 
@@ -1373,9 +1379,13 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 	wake_lock_init(&charger->recovery_wake_lock, WAKE_LOCK_SUSPEND,
 					       "charger-recovery");
 	INIT_DELAYED_WORK(&charger->recovery_work, max77693_recovery_work);
+
+#if defined(CONFIG_CHARGER_MAX77803) || defined(CONFIG_MACH_JF)
 	wake_lock_init(&charger->wpc_wake_lock, WAKE_LOCK_SUSPEND,
 					       "charger-wpc");
 	INIT_DELAYED_WORK(&charger->wpc_work, wpc_detect_work);
+#endif
+
 	ret = power_supply_register(&pdev->dev, &charger->psy_chg);
 	if (ret) {
 		pr_err("%s: Failed to Register psy_chg\n", __func__);
@@ -1398,8 +1408,11 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 	charger->wc_w_irq = pdata->irq_base + MAX77693_CHG_IRQ_WCIN_I;
 	ret = request_threaded_irq(charger->wc_w_irq,
 			NULL, wpc_charger_irq,
-			IRQF_TRIGGER_FALLING,
-			"wpc-int", charger);
+#if defined(CONFIG_MACH_JF)
+			IRQF_TRIGGER_FALLING,"wpc-int", charger);
+#else
+			0, "wpc-int", charger);
+#endif
 	if (ret) {
 		pr_err("%s: Failed to Reqeust IRQ\n", __func__);
 		goto err_wc_irq;
@@ -1444,8 +1457,13 @@ static __devinit int max77693_charger_probe(struct platform_device *pdev)
 		pr_err("%s: fail to request bypass IRQ: %d: %d\n",
 				__func__, charger->irq_bypass, ret);
 	return 0;
+
+#if defined(CONFIG_WIRELESS_CHARGING) ||\
+	defined(CONFIG_CHARGER_MAX77803) ||\
+	defined(CONFIG_MACH_JF)
 err_wc_irq:
 	free_irq(charger->pdata->chg_irq, NULL);
+#endif
 err_irq:
 	power_supply_unregister(&charger->psy_chg);
 err_power_supply_register:
