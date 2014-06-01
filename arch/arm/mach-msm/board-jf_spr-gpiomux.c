@@ -334,19 +334,11 @@ struct msm_gpiomux_config vcap_configs[] = {
 };
 #endif
 
-#if defined(CONFIG_BOARD_JF_REFRESH)
-static struct gpiomux_setting gpio_i2c_config_rfr = {
-	.func = GPIOMUX_FUNC_GPIO,
-	.drv = GPIOMUX_DRV_2MA,
-	.pull = GPIOMUX_PULL_NONE,
-};
-#else
 static struct gpiomux_setting gpio_nc_config = {
 	.func = GPIOMUX_FUNC_GPIO,
 	.drv = GPIOMUX_DRV_2MA,
 	.pull = GPIOMUX_PULL_DOWN,
 };
-#endif
 
 static struct gpiomux_setting mbhc_hs_detect = {
 	.func = GPIOMUX_FUNC_1,
@@ -809,26 +801,9 @@ static struct msm_gpiomux_config apq8064_gsbi_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gsbi7_func1_cfg,
 		},
 	},
-#if defined(CONFIG_BOARD_JF_REFRESH)
-	{
-		.gpio      = 21,		/* GSBI1 QUP I2C_CLK */
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_rfr,
-			[GPIOMUX_ACTIVE] = &gpio_i2c_config_rfr,
-		},
-	},
-	{
-		.gpio      = 20,		/* GSBI1 QUP I2C_DATA */
-		.settings = {
-			[GPIOMUX_SUSPENDED] = &gpio_i2c_config_rfr,
-			[GPIOMUX_ACTIVE] = &gpio_i2c_config_rfr,
-		},
-	},
-#endif
 };
 
 static struct msm_gpiomux_config apq8064_nc_configs[] __initdata = {
-#if !defined(CONFIG_BOARD_JF_REFRESH)
 	{
 		.gpio      = 20,
 		.settings = {
@@ -841,7 +816,6 @@ static struct msm_gpiomux_config apq8064_nc_configs[] __initdata = {
 			[GPIOMUX_SUSPENDED] = &gpio_nc_config,
 		},
 	},
-#endif
 };
 
 static struct msm_gpiomux_config apq8064_slimbus_config[] __initdata = {
