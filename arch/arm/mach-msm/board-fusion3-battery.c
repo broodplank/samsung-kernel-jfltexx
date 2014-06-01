@@ -406,7 +406,6 @@ static bool sec_bat_check_cable_result_callback(
 				regulator_enable(l29);
 			}
 		}
-#endif
 	}
 	return true;
 }
