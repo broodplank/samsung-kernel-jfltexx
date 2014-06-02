@@ -245,17 +245,15 @@ static void adreno_input_work(struct work_struct *work)
 			struct adreno_device, input_work);
 	struct kgsl_device *device = &adreno_dev->dev;
 
-	if (!_wake_timeout)
-		return;
-
 	mutex_lock(&device->mutex);
 
 	device->flags |= KGSL_FLAG_WAKE_ON_TOUCH;
 
 	/*
-	 * Schedule adreno_start in a high priority workqueue.
+	 * Don't schedule adreno_start in a high priority workqueue, we are
+	 * already in a workqueue which should be sufficient
 	 */
-	kgsl_pwrctrl_wake(device, 1);
+	kgsl_pwrctrl_wake(device, 0);
 
 	/*
 	 * When waking up from a touch event we want to stay active long enough
@@ -1733,8 +1731,7 @@ static int adreno_init(struct kgsl_device *device)
 	int ret;
 
 	/* Make a high priority workqueue for starting the GPU */
-	/* adreno_wq = alloc_workqueue("adreno", WQ_HIGHPRI | WQ_UNBOUND, 1); */
-	adreno_wq = alloc_workqueue("adreno", WQ_HIGHPRI, 0);
+	adreno_wq = alloc_workqueue("adreno", WQ_HIGHPRI | WQ_UNBOUND, 1);
 
 	kgsl_pwrctrl_set_state(device, KGSL_STATE_INIT);
 	/*
