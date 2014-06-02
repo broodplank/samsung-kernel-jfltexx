@@ -1,4 +1,4 @@
-/* Copyright (c) 2012, The Linux Foundation. All rights reserved.
+/* Copyright (c) 2012-2013, The Linux Foundation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 and
@@ -40,6 +40,20 @@
 #define MSM8930_RPM_MASTER_STATS_BASE	0x10B100
 #define MSM8930_PC_CNTR_PHYS	(MSM8930_IMEM_PHYS + 0x664)
 #define MSM8930_PC_CNTR_SIZE		0x40
+
+static struct msm_pm_sleep_status_data msm_pm_slp_sts_data = {
+	.base_addr = MSM_ACC0_BASE + 0x08,
+	.cpu_offset = MSM_ACC1_BASE - MSM_ACC0_BASE,
+	.mask = 1UL << 13,
+};
+
+struct platform_device msm8930_cpu_slp_status = {
+	.name		= "cpu_slp_status",
+	.id		= -1,
+	.dev = {
+		.platform_data = &msm_pm_slp_sts_data,
+	},
+};
 
 static struct resource msm8930_resources_pccntr[] = {
 	{

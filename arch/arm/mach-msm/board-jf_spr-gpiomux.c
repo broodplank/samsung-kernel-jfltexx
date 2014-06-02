@@ -348,7 +348,7 @@ static struct gpiomux_setting mbhc_hs_detect = {
 
 static struct gpiomux_setting cdc_mclk = {
 	.func = GPIOMUX_FUNC_1,
-	.drv = GPIOMUX_DRV_4MA,
+	.drv = GPIOMUX_DRV_8MA,
 	.pull = GPIOMUX_PULL_NONE,
 };
 
@@ -704,9 +704,6 @@ static struct msm_gpiomux_config sensorhub_configs[] __initdata = {
 			[GPIOMUX_ACTIVE] = &mcu_chg_cfg,
 		},
 	},
-};
-
-static struct msm_gpiomux_config nfc_firmware_configs[] __initdata = {
 	{
 		.gpio = 70,
 		.settings = {
@@ -1635,10 +1632,6 @@ void __init apq8064_init_gpiomux(void)
 
 	msm_gpiomux_install(sensorhub_configs,
 			ARRAY_SIZE(sensorhub_configs));
-	if (system_rev > BOARD_REV11)
-		msm_gpiomux_install(nfc_firmware_configs,
-			ARRAY_SIZE(nfc_firmware_configs));
-
 	msm_gpiomux_install(apq8064_slimbus_config,
 			ARRAY_SIZE(apq8064_slimbus_config));
 
