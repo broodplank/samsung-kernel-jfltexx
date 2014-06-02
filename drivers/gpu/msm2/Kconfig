@@ -103,9 +103,3 @@ config MSM_KGSL_SIMPLE_GOV
 	depends on MSM_KGSL
 	---help---
 	  A simple KGSL GPU govenor for Qualcom Adreno XXX devices
-
-config MSM_KGSL_KERNEL_API_ENABLE
-	bool "Enable kernel API for KGSL"
-	default n
-	---help---
-	  This API will use by device driver for performance.

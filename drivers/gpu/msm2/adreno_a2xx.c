@@ -2314,7 +2314,5 @@ struct adreno_gpudev adreno_a2xx_gpudev = {
 	.rb_init = a2xx_rb_init,
 	.busy_cycles = a2xx_busy_cycles,
 	.start = a2xx_start,
-#if 0
-	.postmortem_dump = a2xx_postmortem_dump,
-#endif
+	//.postmortem_dump = a2xx_postmortem_dump,
 };

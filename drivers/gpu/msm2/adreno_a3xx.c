@@ -4392,8 +4392,6 @@ struct adreno_gpudev adreno_a3xx_gpudev = {
 	.coresight_enable = a3xx_coresight_enable,
 	.coresight_disable = a3xx_coresight_disable,
 	.coresight_config_debug_reg = a3xx_coresight_config_debug_reg,
-#if 0
-	.postmortem_dump = a3xx_postmortem_dump,
-#endif
+	//.postmortem_dump = a3xx_postmortem_dump,
 	.soft_reset = a3xx_soft_reset,
 };
