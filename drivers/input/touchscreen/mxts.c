@@ -507,7 +507,7 @@ static void inform_charger(struct mxt_callbacks *cb,
 
 	cancel_delayed_work_sync(&data->noti_dwork);
 	data->charging_mode = en;
-	queue_delayed_work(system_power_efficient_wq, &data->noti_dwork, HZ / 5);
+	schedule_delayed_work(&data->noti_dwork, HZ / 5);
 }
 
 static void charger_noti_dwork(struct work_struct *work)
@@ -517,7 +517,7 @@ static void charger_noti_dwork(struct work_struct *work)
 		noti_dwork.work);
 
 	if (!data->mxt_enabled) {
-		queue_delayed_work(system_power_efficient_wq, &data->noti_dwork, HZ / 5);
+		schedule_delayed_work(&data->noti_dwork, HZ / 5);
 		return ;
 	}
 
@@ -560,7 +560,7 @@ static void mxt_set_dvfs_lock(struct mxt_data *data, uint32_t on)
 	if (on == 0) {
 		if (data->dvfs_lock_status) {
 			delay = booster_off_time;
-			queue_delayed_work(system_power_efficient_wq, &data->work_dvfs_off,
+			schedule_delayed_work(&data->work_dvfs_off,
 				msecs_to_jiffies(delay));
 		}
 	} else if (on == 1) {
@@ -583,7 +583,7 @@ static void mxt_set_dvfs_lock(struct mxt_data *data, uint32_t on)
 		}
 	} else if (on == 2) {
 		cancel_delayed_work(&data->work_dvfs_off);
-		queue_work(system_power_efficient_wq, &data->work_dvfs_off.work);
+		schedule_work(&data->work_dvfs_off.work);
 	}
 	mutex_unlock(&data->dvfs_lock);
 }

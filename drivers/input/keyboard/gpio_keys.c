@@ -405,7 +405,7 @@ static void gpio_key_set_dvfs_lock(struct gpio_button_data *bdata,
 	if (on == 0) {
 		if (bdata->dvfs_lock_status) {
 			delay = booster_off_time;
-			queue_delayed_work(system_power_efficient_wq, &bdata->work_dvfs_off,
+			schedule_delayed_work(&bdata->work_dvfs_off,
 				msecs_to_jiffies(delay));
 		}
 	} else if (on == 1) {
@@ -424,7 +424,7 @@ static void gpio_key_set_dvfs_lock(struct gpio_button_data *bdata,
 					__func__, ret);
 
 			delay = booster_chg_time;
-			queue_delayed_work(system_power_efficient_wq, &bdata->work_dvfs_chg,
+			schedule_delayed_work(&bdata->work_dvfs_chg,
 				msecs_to_jiffies(delay));
 			bdata->dvfs_lock_status = true;
 		}
@@ -480,7 +480,7 @@ static void gpio_keys_gpio_timer(unsigned long _data)
 {
 	struct gpio_button_data *bdata = (struct gpio_button_data *)_data;
 
-	queue_work(system_power_efficient_wq, &bdata->work);
+	schedule_work(&bdata->work);
 }
 
 static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
@@ -493,7 +493,7 @@ static irqreturn_t gpio_keys_gpio_isr(int irq, void *dev_id)
 		mod_timer(&bdata->timer,
 			jiffies + msecs_to_jiffies(bdata->timer_debounce));
 	else
-		queue_work(system_power_efficient_wq, &bdata->work);
+		schedule_work(&bdata->work);
 
 	return IRQ_HANDLED;
 }
@@ -689,9 +689,9 @@ static irqreturn_t flip_cover_detect(int irq, void *dev_id)
 
 	cancel_delayed_work_sync(&ddata->flip_cover_dwork);
 #ifdef CONFIG_SEC_FACTORY
-	queue_delayed_work(system_power_efficient_wq, &ddata->flip_cover_dwork, HZ / 20);
+	schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 20);
 #else
-	queue_delayed_work(system_power_efficient_wq, &ddata->flip_cover_dwork, 0);
+	schedule_delayed_work(&ddata->flip_cover_dwork, 0);
 #endif
 	return IRQ_HANDLED;
 }
@@ -720,7 +720,7 @@ static int gpio_keys_open(struct input_dev *input)
 		irq, ddata->gpio_flip_cover);
 	} else {
 		/* update the current status */
-		queue_delayed_work(system_power_efficient_wq, &ddata->flip_cover_dwork, HZ / 2);
+		schedule_delayed_work(&ddata->flip_cover_dwork, HZ / 2);
 	}
 #endif
 	return ddata->enable ? ddata->enable(input->dev.parent) : 0;
