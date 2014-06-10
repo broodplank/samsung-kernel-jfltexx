@@ -53,11 +53,13 @@ static bool force_cpu_up = false;
 static struct hotplug_tuners {
 	unsigned int hotplug_sampling_rate;
 	unsigned int hotplug_enable;
+	unsigned int min_cpus_online;
 	unsigned int maxcoreslimit;
 	unsigned int maxcoreslimit_sleep;
 } hotplug_tuners_ins = {
 	.hotplug_sampling_rate = 60,
 	.hotplug_enable = 0,
+	.min_cpus_online = 1,
 	.maxcoreslimit = NR_CPUS,
 	.maxcoreslimit_sleep = 1,
 };
@@ -198,6 +200,7 @@ static void __ref schedule_hotplug_work(struct work_struct *work)
 static void __cpuinit hotplug_work_fn(struct work_struct *work)
 {
 	int upmaxcoreslimit = 0;
+	unsigned int min_cpus_online = hotplug_tuners_ins.min_cpus_online;
 	unsigned int cpu = 0;
 	int online_cpu = 0;
 	int offline_cpu = 0;
@@ -280,11 +283,11 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 					pcpu_info->cpu_down_rate = 1;
 					++offline_cpu;
 					continue;
-			} else if (force_up == true) {
+			} else if (force_up == true || upcpu < min_cpus_online) {
 					check_up = true;
-					cur_load = up_load;
-					cur_freq = up_freq;
-					rq_avg = (up_rq + 1);
+					up_load = 0;
+					up_freq = 0;
+					up_rq = 0;
 			}
 
 			if (!cpu_online(upcpu)
@@ -300,7 +303,7 @@ static void __cpuinit hotplug_work_fn(struct work_struct *work)
 					} else {
 						++pcpu_info->cpu_up_rate;
 					}
-			} else if (cpu > 0
+			} else if (cpu >= min_cpus_online
 					   && (cur_freq <= down_freq 
 						   || (cur_load < down_load
 						       && rq_avg <= down_rq))) {
@@ -438,6 +441,7 @@ static ssize_t show_##file_name						\
 
 show_one(hotplug_sampling_rate, hotplug_sampling_rate);
 show_one(hotplug_enable, hotplug_enable);
+show_one(min_cpus_online, min_cpus_online);
 show_one(maxcoreslimit, maxcoreslimit);
 show_one(maxcoreslimit_sleep, maxcoreslimit_sleep);
 
@@ -638,6 +642,27 @@ static ssize_t store_hotplug_enable(struct kobject *a, struct attribute *b,
 	return count;
 }
 
+/* min_cpus_online */
+static ssize_t store_min_cpus_online(struct kobject *a, struct attribute *b,
+				  const char *buf, size_t count)
+{
+	int input;
+	int ret;
+
+	ret = sscanf(buf, "%u", &input);
+	if (ret != 1)
+		return -EINVAL;
+
+	input = max(input > NR_CPUS ? NR_CPUS : input, 1);
+
+	if (hotplug_tuners_ins.min_cpus_online == input)
+		return count;
+
+	hotplug_tuners_ins.min_cpus_online = input;
+
+	return count;
+}
+
 /* maxcoreslimit */
 static ssize_t store_maxcoreslimit(struct kobject *a, struct attribute *b,
 				  const char *buf, size_t count)
@@ -683,6 +708,7 @@ static ssize_t store_maxcoreslimit_sleep(struct kobject *a,
 
 define_one_global_rw(hotplug_sampling_rate);
 define_one_global_rw(hotplug_enable);
+define_one_global_rw(min_cpus_online);
 define_one_global_rw(maxcoreslimit);
 define_one_global_rw(maxcoreslimit_sleep);
 
@@ -721,6 +747,7 @@ static struct attribute *alucard_hotplug_attributes[] = {
 	&hotplug_rate_3_1.attr,
 	&hotplug_rate_4_0.attr,
 #endif
+	&min_cpus_online.attr,
 	&maxcoreslimit.attr,
 	&maxcoreslimit_sleep.attr,
 	NULL
