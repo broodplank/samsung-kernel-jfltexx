@@ -128,8 +128,6 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 		pr_info("%s: Max frequency reset for cpu%d\n",
 				KBUILD_MODNAME, cpu);
 
-#if 0
-	/* Frequency of cpu target is already limited so this following code is useless */
 	if (cpu_online(cpu)) {
 		struct cpufreq_policy *policy = cpufreq_cpu_get(cpu);
 		if (!policy)
@@ -138,7 +136,6 @@ static int update_cpu_max_freq(int cpu, uint32_t max_freq)
 				CPUFREQ_RELATION_H);
 		cpufreq_cpu_put(policy);
 	}
-#endif
 
 	return ret;
 }
@@ -255,6 +252,7 @@ static void __cpuinit do_freq_control(long temp)
 	for_each_possible_cpu(cpu) {
 		if (!(msm_thermal_info.freq_control_mask & BIT(cpu)))
 			continue;
+
 		ret = update_cpu_max_freq(cpu, max_freq);
 		if (ret)
 			pr_debug(
