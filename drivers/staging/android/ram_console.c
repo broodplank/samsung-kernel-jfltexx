@@ -13,6 +13,8 @@
  *
  */
 
+#define pr_fmt(fmt) "ram_console: " fmt
+
 #include <linux/console.h>
 #include <linux/init.h>
 #include <linux/module.h>
@@ -27,6 +29,11 @@
 static struct persistent_ram_zone *ram_console_zone;
 static const char *bootinfo;
 static size_t bootinfo_size;
+
+/*                                                                    
+                                                                       
+  */
+#define USE_RAM_CONSOLE_ECC	false
 
 static void
 ram_console_write(struct console *console, const char *s, unsigned int count)
@@ -55,7 +62,7 @@ static int __devinit ram_console_probe(struct platform_device *pdev)
 	struct ram_console_platform_data *pdata = pdev->dev.platform_data;
 	struct persistent_ram_zone *prz;
 
-	prz = persistent_ram_init_ringbuffer(&pdev->dev, true);
+	prz = persistent_ram_init_ringbuffer(&pdev->dev, USE_RAM_CONSOLE_ECC);
 	if (IS_ERR(prz))
 		return PTR_ERR(prz);
 
@@ -100,6 +107,9 @@ static ssize_t ram_console_read_old(struct file *file, char __user *buf,
 	const char *old_log = persistent_ram_old(prz);
 	char *str;
 	int ret;
+
+	if (dmesg_restrict && !capable(CAP_SYSLOG))
+		return -EPERM;
 
 	/* Main last_kmsg log */
 	if (pos < old_log_size) {
@@ -160,7 +170,7 @@ static int __init ram_console_late_init(void)
 
 	entry = create_proc_entry("last_kmsg", S_IFREG | S_IRUGO, NULL);
 	if (!entry) {
-		printk(KERN_ERR "ram_console: failed to create proc entry\n");
+		pr_err("failed to create proc entry\n");
 		persistent_ram_free_old(prz);
 		return 0;
 	}
