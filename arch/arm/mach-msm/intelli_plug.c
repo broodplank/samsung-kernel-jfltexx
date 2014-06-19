@@ -49,20 +49,12 @@ static struct workqueue_struct *intelliplug_wq;
 
 static bool hotplug_suspended = false;
 
-struct ip_cpu_info {
-	int cpu;
-	unsigned int curr_max;
-};
-
-static DEFINE_PER_CPU(struct ip_cpu_info, ip_info);
-
 /* HotPlug Driver controls */
 static atomic_t intelli_plug_active = ATOMIC_INIT(0);
 static unsigned int wake_boost_active = 0;
 static unsigned int cpus_boosted = DEFAULT_NR_CPUS_BOOSTED;
 static unsigned int min_cpus_online = DEFAULT_MIN_CPUS_ONLINE;
 static unsigned int max_cpus_online = DEFAULT_MAX_CPUS_ONLINE;
-static unsigned int screen_off_max = UINT_MAX;
 
 /* HotPlug Driver Tuning */
 static unsigned int target_cpus = 0;
@@ -287,35 +279,6 @@ static void __ref wakeup_boost(void)
 }
 
 #if defined(CONFIG_POWERSUSPEND) || defined(CONFIG_HAS_EARLYSUSPEND)
-static void screen_off_limit(bool on)
-{
-	unsigned int i, ret;
-	struct cpufreq_policy policy;
-	struct ip_cpu_info *l_ip_info;
-
-	/* not active, so exit */
-	if (screen_off_max == UINT_MAX)
-		return;
-
-	for_each_online_cpu(i) {
-
-		l_ip_info = &per_cpu(ip_info, i);
-		ret = cpufreq_get_policy(&policy, i);
-		if (ret)
-			continue;
-
-		if (on) {
-			/* save current instance */
-			l_ip_info->curr_max = policy.max;
-			policy.max = screen_off_max;
-		} else {
-			/* restore */
-			policy.max = l_ip_info->curr_max;
-		}
-		cpufreq_update_policy(i);
-	}
-}
-
 #ifdef CONFIG_POWERSUSPEND
 static void intelli_plug_suspend(struct power_suspend *handler)
 #else
@@ -333,7 +296,6 @@ static void intelli_plug_suspend(struct early_suspend *handler)
 
 	mutex_lock(&intelli_plug_mutex);
 	hotplug_suspended = true;
-	screen_off_limit(true);
 	mutex_unlock(&intelli_plug_mutex);
 
 	/* put rest of the cores to sleep! */
@@ -357,7 +319,6 @@ static void __ref intelli_plug_resume(struct early_suspend *handler)
 
 	mutex_lock(&intelli_plug_mutex);
 	hotplug_suspended = false;
-	screen_off_limit(false);
 	mutex_unlock(&intelli_plug_mutex);
 
 	if (wake_boost_active)
@@ -574,7 +535,6 @@ show_one(debug_intelli_plug, debug_intelli_plug);
 show_one(nr_fshift, nr_fshift);
 show_one(nr_run_hysteresis, nr_run_hysteresis);
 show_one(down_lock_duration, down_lock_dur);
-show_one(screen_off_max, screen_off_max);
 
 #define store_one(file_name, object)		\
 static ssize_t store_##file_name		\
@@ -601,7 +561,6 @@ store_one(debug_intelli_plug, debug_intelli_plug);
 store_one(nr_fshift, nr_fshift);
 store_one(nr_run_hysteresis, nr_run_hysteresis);
 store_one(down_lock_duration, down_lock_dur);
-store_one(screen_off_max, screen_off_max);
 
 static ssize_t show_intelli_plug_active(struct kobject *kobj,
 					struct kobj_attribute *attr,
@@ -708,7 +667,6 @@ KERNEL_ATTR_RW(debug_intelli_plug);
 KERNEL_ATTR_RW(nr_fshift);
 KERNEL_ATTR_RW(nr_run_hysteresis);
 KERNEL_ATTR_RW(down_lock_duration);
-KERNEL_ATTR_RW(screen_off_max);
 
 static struct attribute *intelli_plug_attrs[] = {
 	&intelli_plug_active_attr.attr,
@@ -722,7 +680,6 @@ static struct attribute *intelli_plug_attrs[] = {
 	&nr_fshift_attr.attr,
 	&nr_run_hysteresis_attr.attr,
 	&down_lock_duration_attr.attr,
-	&screen_off_max_attr.attr,
 	NULL,
 };
 
