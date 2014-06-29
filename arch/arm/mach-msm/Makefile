@@ -437,6 +437,6 @@ obj-$(CONFIG_BT_BCM4335) += board-bluetooth-bcm4335.o
 
 obj-$(CONFIG_CPU_FREQ_MSM) += cpufreq.o
 obj-$(CONFIG_FORCE_FAST_CHARGE) += fastchg.o
-obj-$(CONFIG_INTELLI_PLUG) += intelli_plug.o
+obj-$(CONFIG_INTELLI_HOTPLUG) += intelli_plug.o
 obj-$(CONFIG_ALUCARD_HOTPLUG) += alucard_hotplug.o
 obj-$(CONFIG_CPUFREQ_LIMIT_MANAGER) += cpufreq_limit_manager.o
