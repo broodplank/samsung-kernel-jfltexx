@@ -299,21 +299,7 @@ static int __init cpufreq_limit_manager_init(void)
 	return (rc);
 }
 
-static int __exit cpufreq_limit_manager_exit(void)
-{
-#if defined(CONFIG_POWERSUSPEND)
-	unregister_power_suspend(&cpufreq_limit_suspend_driver);
-#elif defined(CONFIG_HAS_EARLYSUSPEND)
-	unregister_early_suspend(&cpufreq_limit_suspend_driver);
-#endif  /* CONFIG_POWERSUSPEND || CONFIG_HAS_EARLYSUSPEND */
-
-	sysfs_remove_group(kernel_kobj, &cpufreq_limit_manager_attr_group);
-
-	return 0;
-}
-
 MODULE_AUTHOR("Alucard_24 XDA");
 MODULE_DESCRIPTION("CPUFREQ Limit manager");
 MODULE_LICENSE("GPL");
 late_initcall(cpufreq_limit_manager_init);
-late_initexit(cpufreq_limit_manager_exit);

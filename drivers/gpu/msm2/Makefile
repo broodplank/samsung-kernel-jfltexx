@@ -1,4 +1,6 @@
 ccflags-y := -Iinclude/uapi/drm -Iinclude/drm -Idrivers/gpu/msm2
+CFLAGS_adreno_a2xx.o += -w
+CFLAGS_adreno_a3xx.o += -w
 
 msm_kgsl_core-y = \
 	kgsl.o \

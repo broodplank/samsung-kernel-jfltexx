@@ -739,7 +739,9 @@ static int fwu_enter_flash_prog(void)
 static int fwu_do_reflash(void)
 {
 	int retval;
+#ifdef TSP_BOOSTER
 	unsigned int limit;
+#endif
 
 #ifdef TSP_BOOSTER
 	if (dvfs_boost_mode > 0) {
