@@ -1,6 +1,6 @@
 #
 # Automatically generated file; DO NOT EDIT.
-# Linux/arm 3.4.95 Kernel Configuration
+# Linux/arm 3.4.96 Kernel Configuration
 #
 CONFIG_ARM=y
 CONFIG_ARM_HAS_SG_CHAIN=y
@@ -1407,6 +1407,7 @@ CONFIG_BLK_DEV_DM_BUILTIN=y
 CONFIG_BLK_DEV_DM=y
 # CONFIG_DM_DEBUG is not set
 CONFIG_DM_CRYPT=y
+# CONFIG_DM_REQ_CRYPT is not set
 # CONFIG_DM_SNAPSHOT is not set
 # CONFIG_DM_THIN_PROVISIONING is not set
 # CONFIG_DM_MIRROR is not set
@@ -3211,6 +3212,8 @@ CONFIG_SPS=y
 CONFIG_SPS_SUPPORT_BAMDMA=y
 # CONFIG_SPS_SUPPORT_NDP_BAM is not set
 CONFIG_MSM_AVTIMER=y
+CONFIG_PFT=y
+# CONFIG_SSM is not set
 CONFIG_CLKDEV_LOOKUP=y
 CONFIG_HAVE_CLK_PREPARE=y
 
