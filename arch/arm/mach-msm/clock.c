@@ -403,6 +403,9 @@ EXPORT_SYMBOL(clk_set_max_rate);
 
 int clk_set_parent(struct clk *clk, struct clk *parent)
 {
+	if (IS_ERR_OR_NULL(clk))
+		return -EINVAL;
+
 	if (!clk->ops->set_parent)
 		return 0;
 
