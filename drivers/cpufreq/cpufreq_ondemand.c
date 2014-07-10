@@ -74,7 +74,7 @@ static unsigned int SUP_FREQ_STEPS[SUP_MAX_STEP] = {4, 3, 2};
 static unsigned int min_range = 108000;
 
 #if defined(SMART_UP_SLOW_UP_AT_HIGH_FREQ)
-#define SUP_SLOW_UP_FREQUENCY			(1674000)
+#define SUP_SLOW_UP_FREQUENCY			(1890000)
 #define SUP_SLOW_UP_LOAD			(75)
 
 typedef struct {
@@ -107,18 +107,6 @@ static unsigned int min_sampling_rate;
 #define POWERSAVE_BIAS_MINLEVEL			(-1000)
 
 static void do_dbs_timer(struct work_struct *work);
-static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
-				unsigned int event);
-
-#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
-static
-#endif
-struct cpufreq_governor cpufreq_gov_ondemand = {
-       .name                   = "ondemand",
-       .governor               = cpufreq_governor_dbs,
-       .max_transition_latency = TRANSITION_LATENCY_LIMIT,
-       .owner                  = THIS_MODULE,
-};
 
 /* Sampling types */
 enum {DBS_NORMAL_SAMPLE, DBS_SUB_SAMPLE};
@@ -414,6 +402,7 @@ static ssize_t store_io_is_busy(struct kobject *a, struct attribute *b,
 	if (ret != 1)
 		return -EINVAL;
 	dbs_tuners_ins.io_is_busy = !!input;
+
 	return count;
 }
 
@@ -777,7 +766,7 @@ static ssize_t store_smart_up(struct kobject *a, struct attribute *b,
 		input = 1;
 	} else if (input < 0 ) {
 		input = 0;
-        }
+	}
 
 	/* buffer reset */
 	for_each_online_cpu(i) {
@@ -853,6 +842,7 @@ static ssize_t store_smart_slow_up_dur(struct kobject *a, struct attribute *b,
 		reset_hist(&hist_load[i]);
 	}
 	dbs_tuners_ins.smart_slow_up_dur = input;
+
 
 	return count;
 }
@@ -1042,7 +1032,31 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		if (unlikely(!wall_time || wall_time < idle_time))
 			continue;
 
-		cur_load = 100 * (wall_time - idle_time) / wall_time;
+		/*
+		 * If the CPU had gone completely idle, and a task just woke up
+		 * on this CPU now, it would be unfair to calculate 'load' the
+		 * usual way for this elapsed time-window, because it will show
+		 * near-zero load, irrespective of how CPU intensive the new
+		 * task is. This is undesirable for latency-sensitive bursty
+		 * workloads.
+		 *
+		 * To avoid this, we reuse the 'load' from the previous
+		 * time-window and give this task a chance to start with a
+		 * reasonably high CPU frequency.
+		 *
+		 * Detecting this situation is easy: the governor's deferrable
+		 * timer would not have fired during CPU-idle periods. Hence
+		 * an unusually large 'wall_time' indicates this scenario.
+		 */
+		if (unlikely(wall_time > (2 * dbs_tuners_ins.sampling_rate))) {
+			cur_load = j_dbs_info->prev_load;
+		} else {
+			cur_load = 100 * (wall_time - idle_time) / wall_time;
+		}
+
+		if (cur_load > max_load)
+			max_load = cur_load;
+
 		j_dbs_info->max_load  = max(cur_load, j_dbs_info->prev_load);
 		j_dbs_info->prev_load = cur_load;
 		freq_avg = __cpufreq_driver_getavg(policy, j);
@@ -1119,7 +1133,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 					int i = 0;
 					for (i = 0; i < dbs_tuners_ins.smart_slow_up_dur; i++)
 						sum_hist_load_freq +=
-						hist_load[core_j].hist_max_load[i];
+							hist_load[core_j].hist_max_load[i];
 
 					avg_hist_load = sum_hist_load_freq
 							/ dbs_tuners_ins.smart_slow_up_dur;
@@ -1186,7 +1200,7 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 					dbs_tuners_ins.sampling_down_factor;
 
 			dbs_freq_increase(policy, freq_target);
-				return;
+			return;
 		}
 	}
 
@@ -1278,7 +1292,6 @@ static void do_dbs_timer(struct work_struct *work)
 		container_of(work, struct cpu_dbs_info_s, work.work);
 	unsigned int cpu = dbs_info->cpu;
 	int sample_type = dbs_info->sample_type;
-
 	int delay;
 
 	mutex_lock(&dbs_info->timer_mutex);
@@ -1331,7 +1344,6 @@ static void dbs_refresh_callback(struct work_struct *work)
 	struct cpu_dbs_info_s *this_dbs_info;
 	struct dbs_work_struct *dbs_work;
 	unsigned int cpu;
-	unsigned int target_freq;
 
 	dbs_work = container_of(work, struct dbs_work_struct, work);
 	cpu = dbs_work->cpu;
@@ -1348,20 +1360,17 @@ static void dbs_refresh_callback(struct work_struct *work)
 		goto bail_incorrect_governor;
 	}
 
-	target_freq = policy->max;
-
-	if (policy->cur < target_freq) {
+	if (policy->cur < policy->max) {
 		/*
 		 * Arch specific cpufreq driver may fail.
 		 * Don't update governor frequency upon failure.
 		 */
-		if (__cpufreq_driver_target(policy, target_freq,
+		if (__cpufreq_driver_target(policy, policy->max,
 					CPUFREQ_RELATION_L) >= 0)
-			policy->cur = target_freq;
+				policy->cur = policy->max;
 
 		this_dbs_info->prev_cpu_idle = get_cpu_idle_time(cpu,
-				&this_dbs_info->prev_cpu_wall,
-				dbs_tuners_ins.io_is_busy);
+				&this_dbs_info->prev_cpu_wall, dbs_tuners_ins.io_is_busy);
 	}
 
 bail_incorrect_governor:
@@ -1392,12 +1401,17 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 		dbs_enable++;
 		for_each_cpu(j, policy->cpus) {
 			struct cpu_dbs_info_s *j_dbs_info;
+			u64 tmp;
 			j_dbs_info = &per_cpu(od_cpu_dbs_info, j);
 			j_dbs_info->cur_policy = policy;
 
 			j_dbs_info->prev_cpu_idle = get_cpu_idle_time(j,
 						&j_dbs_info->prev_cpu_wall,
 						dbs_tuners_ins.io_is_busy);
+			tmp = j_dbs_info->prev_cpu_wall -
+				j_dbs_info->prev_cpu_idle;
+			do_div(tmp, j_dbs_info->prev_cpu_wall);
+			j_dbs_info->prev_load = 100 * tmp;
 			if (dbs_tuners_ins.ignore_nice)
 				j_dbs_info->prev_cpu_nice =
 						kcpustat_cpu(j).cpustat[CPUTIME_NICE];
@@ -1491,6 +1505,16 @@ static int cpufreq_governor_dbs(struct cpufreq_policy *policy,
 	}
 	return 0;
 }
+
+#ifndef CONFIG_CPU_FREQ_DEFAULT_GOV_ONDEMAND
+static
+#endif
+struct cpufreq_governor cpufreq_gov_ondemand = {
+	.name					= "ondemand",
+	.governor				= cpufreq_governor_dbs,
+	.max_transition_latency	= TRANSITION_LATENCY_LIMIT,
+	.owner					= THIS_MODULE,
+};
 
 static int __init cpufreq_gov_dbs_init(void)
 {
