@@ -10,10 +10,6 @@
  *
  */
 
-#ifdef CONFIG_MACH_LGE
-#define CONFIG_LCD_NOTIFY 1
-#endif
-
 #include <linux/workqueue.h>
 #include <linux/cpu.h>
 #include <linux/sched.h>
@@ -334,7 +330,7 @@ static void intelli_plug_suspend(struct work_struct *work)
 			cpu_down(cpu);
 		}
 		need_boost = 1;
-		dprintk("intelli_plug is suspended!\n");
+		dprintk("%s: suspended!\n", INTELLI_PLUG);
 	}
 }
 
@@ -351,7 +347,7 @@ static void __ref intelli_plug_resume(struct work_struct *work)
 		/* Initiate hotplug work if it was cancelled */
 		INIT_DELAYED_WORK(&intelli_plug_work,
 				intelli_plug_work_fn);
-		dprintk("intelli_plug is resumed.\n");
+		dprintk("%s: resumed.\n", INTELLI_PLUG);
 
 		/* Fire up all CPUs */
 		for_each_cpu_not(cpu, cpu_online_mask) {
@@ -376,7 +372,7 @@ static void __ref intelli_plug_resume(struct work_struct *work)
 				apply_down_lock(cpu);
 			}
 		}
-		dprintk("intelli_plug resume was not needed.\n");
+		dprintk("%s: resume was not needed.\n", INTELLI_PLUG);
 	}
 }
 
@@ -417,6 +413,9 @@ static int lcd_notifier_callback(struct notifier_block *nb,
 				unsigned long event, void *data)
 {
 	switch (event) {
+	case LCD_EVENT_ON_END:
+	case LCD_EVENT_OFF_START:
+		break;
 	case LCD_EVENT_ON_START:
 		__intelli_plug_resume();
 		break;

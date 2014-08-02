@@ -10,10 +10,6 @@
  *
  */
 
-#ifdef CONFIG_MACH_LGE
-#define CONFIG_LCD_NOTIFY 1
-#endif
-
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/cpu.h>
@@ -44,7 +40,7 @@
 #define START_DELAY			HZ * 20
 #define MIN_INPUT_INTERVAL		150 * 1000L
 #define DEFAULT_HISTORY_SIZE		10
-#define DEFAULT_DOWN_LOCK_DUR		500
+#define DEFAULT_DOWN_LOCK_DUR		1000
 #define DEFAULT_BOOST_LOCK_DUR		2500 * 1000L
 #define DEFAULT_NR_CPUS_BOOSTED		1
 #define DEFAULT_MIN_CPUS_ONLINE		1
@@ -535,6 +531,7 @@ static void msm_hotplug_suspend(struct work_struct *work)
 				continue;
 			cpu_down(cpu);
 		}
+		hotplug.need_boost = 1;
 		dprintk("%s: suspended.\n", MSM_HOTPLUG);
 	}
 }
@@ -559,8 +556,6 @@ static void __ref msm_hotplug_resume(struct work_struct *work)
 			cpu_up(cpu);
 			apply_down_lock(cpu);
 		}
-		hotplug.need_boost = 1;
-
 		reschedule_hotplug_work();
 
 		dprintk("%s: resumed.\n", MSM_HOTPLUG);
@@ -575,7 +570,7 @@ static void __ref msm_hotplug_resume(struct work_struct *work)
 			cpu_up(cpu);
 			apply_down_lock(cpu);
 		}
-		dprintk("%s: resumed was not needed.\n", MSM_HOTPLUG);
+		dprintk("%s: resume was not needed.\n", MSM_HOTPLUG);
 	}
 }
 
@@ -616,6 +611,9 @@ static int lcd_notifier_callback(struct notifier_block *nb,
                                  unsigned long event, void *data)
 {
 	switch (event) {
+	case LCD_EVENT_ON_END:
+	case LCD_EVENT_OFF_START:
+		break;
 	case LCD_EVENT_ON_START:
 		__msm_hotplug_resume();
 		break;
