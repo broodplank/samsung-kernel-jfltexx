@@ -168,16 +168,12 @@ spm_failed_malloc:
 	return ret;
 }
 
-<<<<<<< HEAD
-int msm_spm_turn_on_cpu_rail(unsigned int cpu)
-=======
 /**
  * msm_spm_turn_on_cpu_rail(): Power on cpu rail before turning on core
  * @base: core 0's base SAW address
  * @cpu: core id
  */
 int msm_spm_turn_on_cpu_rail(unsigned long base, unsigned int cpu)
->>>>>>> 2d72c5f... msm: spm: Update msm_spm_turn_on_cpu_rail() to use new SAW2 base address
 {
 	uint32_t val = 0;
 	uint32_t timeout = 512; /* delay for voltage to settle on the core */
