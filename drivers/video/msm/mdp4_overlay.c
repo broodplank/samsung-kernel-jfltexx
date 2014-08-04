@@ -987,6 +987,8 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 	uint32 mask;
 	int pnum, ptype, i;
 	uint32_t block;
+	int nbytes;
+	nbytes = 0;
 
 	pnum = pipe->pipe_num - OVERLAY_PIPE_VG1; /* start from 0 */
 	vg_base = MDP_BASE + MDP4_VIDEO_BASE;
@@ -1022,6 +1024,7 @@ void mdp4_overlay_vg_setup(struct mdp4_overlay_pipe *pipe)
 
 			for (i = 0; i < CSC_MAX_BLOCKS; i++) {
 				if (block == csc_cfg_matrix[i].block) {
+					if (nbytes != 0)
 					memcpy(&csc_cfg_matrix[i].csc_data,
 					&(pipe->pp_cfg.csc_cfg),
 					sizeof(struct mdp_csc_cfg));
@@ -3910,6 +3913,9 @@ void mdp4_overlay_dma_commit(int mixer)
 	struct mdp4_overlay_pipe *pipe;
 	char *vg_base;
 	int i, pnum;
+	int nbytes;
+	nbytes = 0;
+	if (nbytes != 0)
 	for (i = 0; i < OVERLAY_PIPE_MAX; i++, pipe++) {
 		pipe = ctrl->stage[mixer][i];
 		if (pipe) {
