@@ -101,6 +101,7 @@ done;
 
 for i in `find $PACKAGEDIR/system/lib/modules/ -name '*.ko'`; do
 	${CROSS_COMPILE}strip --strip-unneeded $i;
+	${CROSS_COMPILE}strip --strip-debug $i;
 done;
 
 chmod 644 $PACKAGEDIR/system/lib/modules/*;
