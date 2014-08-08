@@ -449,7 +449,7 @@ int unthrottle_rt_rq(struct rq *rq)
 	if (rq->rt.rt_throttled 
 		&& current->sched_class == &stop_sched_class) {
 		rq->rt.rt_throttled = 0;
-		printk_sched("sched: RT unthrottled for migration\n");
+		printk_deferred("sched: RT unthrottled for migration\n");
 		return 1;
 	}
 
@@ -859,7 +859,7 @@ static void dump_throttled_rt_tasks(struct rt_rq *rt_rq)
 out:
 #ifdef CONFIG_PANIC_ON_RT_THROTTLING
 	/*
-	 * Use pr_err() in the BUG() case since printk_sched() will
+	 * Use pr_err() in the BUG() case since printk_deferred() will
 	 * not get flushed and deadlock is not a concern.
 	 */
 	pr_err("%s", buf);
